@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RiskLens — Intelligent Loan Risk Assessment</title>
+<title>RiskLens â€” Intelligent Loan Risk Assessment</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -315,9 +315,9 @@
 
     <div>
       <div class="model-chips">
-        <span class="chip">Logistic Regression</span>
-        <span class="chip">Random Forest</span>
-        <span class="chip">XGBoost</span>
+        <span class="chip">UI Prototype</span>
+        <span class="chip">Mock Assessment</span>
+        <span class="chip">No model connected</span>
       </div>
       <div class="login-foot" style="margin-top:34px;">&copy; 2026 RiskLens &middot; Internal Underwriting Console</div>
     </div>
@@ -540,7 +540,7 @@
       <div class="card" id="resultsCard">
         <div class="card-head">
           <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg></div>
-          <div><h3>Risk Assessment</h3><span>Model output &amp; key drivers</span></div>
+          <div><h3>Risk Assessment</h3><span>Mock output for UX testing</span></div>
         </div>
 
         <div id="emptyState" class="empty-state">
@@ -596,40 +596,14 @@
     }, 250);
   }
 
-  // If a session cookie is already valid (e.g. page refresh), skip straight to the app.
-  fetch('/api/session').then(r => r.json()).then(s => {
-    if (s.authenticated) showApp();
-  }).catch(() => {});
-
-  loginForm.addEventListener('submit', async (e) => {
+  // Demo sign-in is local only; no account or server is required.
+  loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
-    loginBtn.disabled = true;
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, password})
-      });
-      const data = await res.json();
-      if (data.ok) {
-        showApp();
-      } else {
-        loginError.textContent = data.error || 'Sign in failed. Please check your credentials.';
-        loginError.style.display = 'block';
-      }
-    } catch (err) {
-      loginError.textContent = 'Could not reach the server. Is the backend running?';
-      loginError.style.display = 'block';
-    } finally {
-      loginBtn.disabled = false;
-    }
+    showApp();
   });
 
-  logoutBtn.addEventListener('click', async () => {
-    try { await fetch('/api/logout', {method:'POST'}); } catch (err) {}
+  logoutBtn.addEventListener('click', () => {
     showLogin();
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('resultContent').style.display = 'none';
@@ -728,34 +702,10 @@
     else if (lti > 2){ score += 5; ltiTier='warn'; }
     else { score -= 5; ltiTier='good'; }
 
-    // ---- get the authoritative score/category from the backend model ----
-    assessBtn.disabled = true;
-    let category;
-    try {
-      const res = await fetch('/api/assess', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          age, empType, empExp, income, addIncome,
-          loanAmt, loanTerm, loanPurpose: document.getElementById('loanPurpose').value,
-          debt, emi, credit, defaults, repayStatus: repay
-        })
-      });
-      if (res.status === 401) {
-        showLogin();
-        return;
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Assessment failed');
-      score = data.score;
-      category = data.category;
-    } catch (err) {
-      assessError.textContent = err.message || 'Could not reach the server. Is the backend running?';
-      assessError.style.display = 'block';
-      return;
-    } finally {
-      assessBtn.disabled = false;
-    }
+    // MOCK SCORING START — replace this block with the trained-model API call.
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    const category = score <= 34 ? 'Low Risk' : score <= 64 ? 'Medium Risk' : 'High Risk';
+    // MOCK SCORING END
 
     const badgeClass = category === 'Low Risk' ? 'risk-low' : category === 'Medium Risk' ? 'risk-medium' : 'risk-high';
 
@@ -768,16 +718,16 @@
     riskBadgeText.textContent = category;
 
     factorList.innerHTML = '';
-    addFactor('Credit score', credit + (creditTier==='good' ? ' — strong' : creditTier==='warn' ? ' — average' : ' — weak'), creditTier, 'credit');
+    addFactor('Credit score', credit + (creditTier==='good' ? ' â€” strong' : creditTier==='warn' ? ' â€” average' : ' â€” weak'), creditTier, 'credit');
     addFactor('Debt-to-income', dti.toFixed(0) + '%', dtiTier, 'dti');
     addFactor('Previous defaults', defaults === 0 ? 'None' : defaults + (defaults===1?' default':' defaults'), defTier, 'defaults');
     addFactor('Repayment history', repayLabel, repayTier, 'repay');
-    addFactor('Employment', empLabel + ' · ' + empExp + 'y exp', empTier, 'emp');
-    addFactor('Loan-to-income', lti.toFixed(1) + '×', ltiTier, 'loan');
+    addFactor('Employment', empLabel + ' Â· ' + empExp + 'y exp', empTier, 'emp');
+    addFactor('Loan-to-income', lti.toFixed(1) + 'Ã—', ltiTier, 'loan');
 
     const recoMap = {
       'Low Risk': 'Applicant shows a <b>strong repayment profile</b> with manageable debt exposure. Suitable for <b>standard approval</b> at prevailing rates.',
-      'Medium Risk': 'Profile shows <b>mixed signals</b> — acceptable overall, but consider <b>additional documentation</b>, a shorter tenure, or a slightly higher rate to offset exposure.',
+      'Medium Risk': 'Profile shows <b>mixed signals</b> â€” acceptable overall, but consider <b>additional documentation</b>, a shorter tenure, or a slightly higher rate to offset exposure.',
       'High Risk': 'Elevated risk driven by debt load and/or credit history. Recommend <b>manual underwriter review</b>, collateral, or a co-applicant before proceeding.'
     };
     recoBox.innerHTML = recoMap[category];
