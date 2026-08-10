@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -315,9 +315,9 @@
 
     <div>
       <div class="model-chips">
-        <span class="chip">UI Prototype</span>
-        <span class="chip">Mock Assessment</span>
-        <span class="chip">No model connected</span>
+        <span class="chip" style="border-color:#1B8F5F;color:#4ADE80;background:rgba(27,143,95,0.15);">âœ“ ML Model Connected</span>
+        <span class="chip">XGBoost Classifier</span>
+        <span class="chip">SMOTE Balanced</span>
       </div>
       <div class="login-foot" style="margin-top:34px;">&copy; 2026 RiskLens &middot; Internal Underwriting Console</div>
     </div>
@@ -643,101 +643,82 @@
   assessForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     assessError.style.display = 'none';
+    assessBtn.disabled = true;
+    assessBtn.style.opacity = '0.7';
+    assessBtn.innerHTML = `
+      <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff;width:17px;height:17px;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="10"/></svg>
+      Evaluating ML Model...
+    `;
 
-    const age = +document.getElementById('age').value;
-    const empType = document.getElementById('empType').value;
-    const empExp = +document.getElementById('empExp').value;
-    const income = +document.getElementById('income').value || 1;
-    const addIncome = +document.getElementById('addIncome').value;
-    const loanAmt = +document.getElementById('loanAmt').value;
-    const loanTerm = +document.getElementById('loanTerm').value || 1;
-    const debt = +document.getElementById('debt').value;
-    const emi = +document.getElementById('emi').value;
-    const credit = +document.getElementById('credit').value;
-    const defaults = +document.getElementById('defaults').value;
-    const repay = document.getElementById('repayStatus').value;
-
-    let score = 50;
-
-    // Credit score
-    let creditTier;
-    if (credit >= 750){ score -= 25; creditTier='good'; }
-    else if (credit >= 700){ score -= 15; creditTier='good'; }
-    else if (credit >= 650){ creditTier='warn'; }
-    else { score += 20; creditTier='bad'; }
-
-    // DTI (approx monthly)
-    const monthlyIncome = (income + addIncome) / 12;
-    const estNewEmi = loanAmt / loanTerm;
-    const dti = ((emi + estNewEmi) / monthlyIncome) * 100;
-    let dtiTier;
-    if (dti > 50){ score += 20; dtiTier='bad'; }
-    else if (dti > 35){ score += 10; dtiTier='warn'; }
-    else { score -= 10; dtiTier='good'; }
-
-    // Previous defaults
-    let defTier;
-    if (defaults === 0){ score -= 10; defTier='good'; }
-    else if (defaults === 1){ score += 10; defTier='warn'; }
-    else { score += 25; defTier='bad'; }
-
-    // Repayment status
-    let repayTier, repayLabel;
-    if (repay === 'excellent'){ score -= 15; repayTier='good'; repayLabel='Excellent'; }
-    else if (repay === 'good'){ score -= 5; repayTier='good'; repayLabel='Good'; }
-    else if (repay === 'fair'){ score += 5; repayTier='warn'; repayLabel='Fair'; }
-    else { score += 20; repayTier='bad'; repayLabel='Poor'; }
-
-    // Employment
-    let empTier, empLabel;
-    if (empType === 'salaried'){ score -= 5; empTier='good'; empLabel='Salaried'; }
-    else if (empType === 'self'){ score += 5; empTier='warn'; empLabel='Self-employed'; }
-    else { score += 15; empTier='bad'; empLabel='Unemployed / Other'; }
-    if (empExp > 5) score -= 8; else if (empExp < 2) score += 8;
-
-    // Loan-to-income
-    const lti = loanAmt / income;
-    let ltiTier;
-    if (lti > 5){ score += 15; ltiTier='bad'; }
-    else if (lti > 2){ score += 5; ltiTier='warn'; }
-    else { score -= 5; ltiTier='good'; }
-
-    // MOCK SCORING START — replace this block with the trained-model API call.
-    score = Math.max(0, Math.min(100, Math.round(score)));
-    const category = score <= 34 ? 'Low Risk' : score <= 64 ? 'Medium Risk' : 'High Risk';
-    // MOCK SCORING END
-
-    const badgeClass = category === 'Low Risk' ? 'risk-low' : category === 'Medium Risk' ? 'risk-medium' : 'risk-high';
-
-    // needle: 0 -> -90deg (left), 100 -> +90deg (right)
-    const angle = (score / 100) * 180 - 90;
-    needle.style.transform = `rotate(${angle}deg)`;
-
-    scoreText.textContent = score;
-    riskBadge.className = 'risk-badge ' + badgeClass;
-    riskBadgeText.textContent = category;
-
-    factorList.innerHTML = '';
-    addFactor('Credit score', credit + (creditTier==='good' ? ' â€” strong' : creditTier==='warn' ? ' â€” average' : ' â€” weak'), creditTier, 'credit');
-    addFactor('Debt-to-income', dti.toFixed(0) + '%', dtiTier, 'dti');
-    addFactor('Previous defaults', defaults === 0 ? 'None' : defaults + (defaults===1?' default':' defaults'), defTier, 'defaults');
-    addFactor('Repayment history', repayLabel, repayTier, 'repay');
-    addFactor('Employment', empLabel + ' Â· ' + empExp + 'y exp', empTier, 'emp');
-    addFactor('Loan-to-income', lti.toFixed(1) + 'Ã—', ltiTier, 'loan');
-
-    const recoMap = {
-      'Low Risk': 'Applicant shows a <b>strong repayment profile</b> with manageable debt exposure. Suitable for <b>standard approval</b> at prevailing rates.',
-      'Medium Risk': 'Profile shows <b>mixed signals</b> â€” acceptable overall, but consider <b>additional documentation</b>, a shorter tenure, or a slightly higher rate to offset exposure.',
-      'High Risk': 'Elevated risk driven by debt load and/or credit history. Recommend <b>manual underwriter review</b>, collateral, or a co-applicant before proceeding.'
+    const payload = {
+      age: +document.getElementById('age').value,
+      empType: document.getElementById('empType').value,
+      empExp: +document.getElementById('empExp').value,
+      income: +document.getElementById('income').value || 0,
+      addIncome: +document.getElementById('addIncome').value || 0,
+      loanAmt: +document.getElementById('loanAmt').value || 0,
+      loanTerm: +document.getElementById('loanTerm').value || 1,
+      loanPurpose: document.getElementById('loanPurpose').value,
+      debt: +document.getElementById('debt').value || 0,
+      emi: +document.getElementById('emi').value || 0,
+      credit: +document.getElementById('credit').value || 300,
+      defaults: +document.getElementById('defaults').value,
+      repayStatus: document.getElementById('repayStatus').value
     };
-    recoBox.innerHTML = recoMap[category];
 
-    document.getElementById('emptyState').style.display = 'none';
-    const rc = document.getElementById('resultContent');
-    rc.style.display = 'block';
-    rc.classList.remove('fade-in'); void rc.offsetWidth; rc.classList.add('fade-in');
+    try {
+      const response = await fetch('/api/assess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    document.getElementById('resultsCard').scrollIntoView({behavior:'smooth', block:'nearest'});
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'ML Assessment backend is unavailable');
+      }
+
+      const result = await response.json();
+      const score = result.score;
+      const category = result.category;
+
+      const badgeClass = category === 'Low Risk' ? 'risk-low' : category === 'Medium Risk' ? 'risk-medium' : 'risk-high';
+
+      // needle: 0 -> -90deg (left), 100 -> +90deg (right)
+      const angle = (score / 100) * 180 - 90;
+      needle.style.transform = `rotate(${angle}deg)`;
+
+      scoreText.textContent = score;
+      riskBadge.className = 'risk-badge ' + badgeClass;
+      riskBadgeText.textContent = category;
+
+      factorList.innerHTML = '';
+      if (Array.isArray(result.factors)) {
+        result.factors.forEach(f => {
+          addFactor(f.label, f.valueText || f.value, f.tier, f.iconKey);
+        });
+      }
+
+      recoBox.innerHTML = result.recommendation;
+
+      document.getElementById('emptyState').style.display = 'none';
+      const rc = document.getElementById('resultContent');
+      rc.style.display = 'block';
+      rc.classList.remove('fade-in'); void rc.offsetWidth; rc.classList.add('fade-in');
+
+      document.getElementById('resultsCard').scrollIntoView({behavior:'smooth', block:'nearest'});
+
+    } catch (err) {
+      assessError.textContent = 'Assessment Failed: ' + err.message;
+      assessError.style.display = 'block';
+    } finally {
+      assessBtn.disabled = false;
+      assessBtn.style.opacity = '1';
+      assessBtn.innerHTML = `
+        <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff;width:17px;height:17px;"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        Assess Risk
+      `;
+    }
   });
 </script>
 </body>

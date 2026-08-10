@@ -1,2 +1,7 @@
-﻿# No external packages are required for the UI prototype.
-# Run: python app.py
+flask>=3.0.0
+pandas>=1.5.0
+numpy>=1.22.0
+scikit-learn>=1.2.0
+xgboost>=1.7.0
+imbalanced-learn>=0.10.0
+joblib>=1.2.0
