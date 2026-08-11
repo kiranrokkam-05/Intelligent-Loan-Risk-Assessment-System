@@ -1,7 +1,7 @@
 """RiskLens Application & Machine Learning API Backend.
 
-Serves the underwriting web console frontend and handles POST /api/assess
-requests powered by the trained ML pipeline (XGBoost / Random Forest / Logistic Regression).
+Serves the underwriting web console frontend and handles ML risk assessment APIs.
+Supports model selection across Logistic Regression, Random Forest, and XGBoost with SMOTE resampling.
 
 Run: python app.py
 Open: http://localhost:8000/
@@ -22,20 +22,23 @@ MODEL_PATH = BASE_DIR / "model.joblib"
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 
-# Load model pipeline on startup
-def load_or_train_model():
+
+def load_or_train_models():
     if not MODEL_PATH.exists():
         print("Model file not found. Running training pipeline...")
         train_and_evaluate()
     
-    print(f"Loading ML model from {MODEL_PATH}...")
+    print(f"Loading ML models from {MODEL_PATH}...")
     saved_data = joblib.load(MODEL_PATH)
-    return saved_data["pipeline"], saved_data.get("model_name", "Trained ML Model")
+    return saved_data
 
-model_pipeline, model_name = load_or_train_model()
+saved_data = load_or_train_models()
+pipelines = saved_data.get("pipelines", {"xgboost": saved_data.get("pipeline")})
+metrics = saved_data.get("metrics", {})
+smote_info = saved_data.get("smote_info", {})
+best_key = saved_data.get("best_key", "xgboost")
 
 
-# Helper to normalize loan purpose string
 def normalize_loan_purpose(raw_purpose: str) -> str:
     p = str(raw_purpose).lower()
     if "home" in p:
@@ -62,7 +65,18 @@ def risk_lens_html():
     return send_from_directory(STATIC_DIR, "riskLens.html")
 
 
-# ============ ML API ENDPOINT ============
+# ============ METRICS API ENDPOINT ============
+
+@app.route("/api/models", methods=["GET"])
+def get_model_metrics():
+    return jsonify({
+        "smoteInfo": smote_info,
+        "metrics": metrics,
+        "bestModelKey": best_key
+    })
+
+
+# ============ ML ASSESSMENT ENDPOINT ============
 
 @app.route("/api/assess", methods=["POST"])
 def assess_risk():
@@ -70,6 +84,15 @@ def assess_risk():
         payload = request.get_json(force=True)
         if not payload:
             return jsonify({"error": "No JSON payload provided"}), 400
+
+        # Model selection: 'xgboost', 'rf', 'lr'
+        model_choice = str(payload.get("modelChoice", best_key)).lower()
+        if model_choice not in pipelines:
+            model_choice = best_key
+            
+        selected_pipeline = pipelines[model_choice]
+        selected_metrics = metrics.get(model_choice, {})
+        model_display_name = selected_metrics.get("name", model_choice.upper())
 
         # Parse & Map fields
         age = float(payload.get("age", 30))
@@ -106,8 +129,8 @@ def assess_risk():
         # Perform Feature Engineering
         engineered_df = add_engineered_features(input_data)
 
-        # ML Prediction
-        default_prob = float(model_pipeline.predict_proba(engineered_df)[0][1])
+        # ML Prediction using chosen model
+        default_prob = float(selected_pipeline.predict_proba(engineered_df)[0][1])
         score = int(np.round(default_prob * 100))
         score = max(0, min(100, score))
 
@@ -120,7 +143,6 @@ def assess_risk():
             category = "High Risk"
 
         # Calculate Tiers & Factors for UI Breakdown
-        # Credit Tier
         if credit_score >= 750:
             credit_tier = "good"
             credit_text = f"{int(credit_score)} - Strong"
@@ -134,7 +156,6 @@ def assess_risk():
             credit_tier = "bad"
             credit_text = f"{int(credit_score)} - Weak"
 
-        # DTI Tier
         dti_val = float(engineered_df["dti"].iloc[0])
         if dti_val > 50:
             dti_tier = "bad"
@@ -143,7 +164,6 @@ def assess_risk():
         else:
             dti_tier = "good"
 
-        # Defaults Tier
         if previous_defaults == 0:
             def_tier = "good"
             def_text = "None"
@@ -154,7 +174,6 @@ def assess_risk():
             def_tier = "bad"
             def_text = f"{previous_defaults} defaults"
 
-        # Repayment Tier
         repay_map = {
             "excellent": ("good", "Excellent"),
             "good": ("good", "Good"),
@@ -163,7 +182,6 @@ def assess_risk():
         }
         repay_tier, repay_text = repay_map.get(repayment_status, ("warn", repayment_status.capitalize()))
 
-        # Employment Tier
         if emp_type == "salaried":
             emp_tier = "good"
             emp_label = "Salaried"
@@ -174,7 +192,6 @@ def assess_risk():
             emp_tier = "bad"
             emp_label = "Unemployed / Other"
 
-        # LTI Tier
         lti_val = float(engineered_df["lti"].iloc[0])
         if lti_val > 5:
             lti_tier = "bad"
@@ -193,16 +210,19 @@ def assess_risk():
         ]
 
         recommendations = {
-            "Low Risk": f"ML Model ({model_name}) predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a <b>strong repayment profile</b> and manageable debt exposure. Suitable for <b>standard approval</b>.",
-            "Medium Risk": f"ML Model ({model_name}) predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows <b>mixed risk indicators</b>. Recommend <b>additional income proof</b> or shorter loan tenure.",
-            "High Risk": f"ML Model ({model_name}) predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend <b>manual underwriter review</b> or collateral requirement."
+            "Low Risk": f"<b>{model_display_name}</b> predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a <b>strong repayment profile</b> and manageable debt exposure. Suitable for <b>standard approval</b>.",
+            "Medium Risk": f"<b>{model_display_name}</b> predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows <b>mixed risk indicators</b>. Recommend <b>additional income proof</b> or shorter loan tenure.",
+            "High Risk": f"<b>{model_display_name}</b> predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend <b>manual underwriter review</b> or collateral requirement."
         }
 
         return jsonify({
             "score": score,
             "category": category,
             "probability": round(default_prob, 4),
-            "modelUsed": model_name,
+            "modelChoice": model_choice,
+            "modelUsed": model_display_name,
+            "allMetrics": metrics,
+            "smoteInfo": smote_info,
             "factors": factors,
             "recommendation": recommendations[category]
         })
@@ -213,7 +233,9 @@ def assess_risk():
 
 if __name__ == "__main__":
     print(f"\n==========================================================")
-    print(f" RiskLens ML Backend Server ({model_name}) Running!")
+    print(f" RiskLens ML Backend Server Running!")
+    print(f" Models Loaded: Logistic Regression, Random Forest, XGBoost")
+    print(f" Resampling: SMOTE Balanced ({smote_info.get('resampled_counts')})")
     print(f" URL: http://localhost:8000/riskLens.html")
     print(f" API: http://localhost:8000/api/assess")
     print(f"==========================================================\n")
