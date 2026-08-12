@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -417,7 +417,7 @@
           <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
               <span style="font-weight:700;color:var(--green);"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M4 12l6 6L20 6"/></svg>SMOTE Resampling Active</span>
-              <span class="mono" style="font-size:11px;color:var(--ink-soft);">Balanced: 454 / 454 (Orig: 454/346)</span>
+              <span class="mono" style="font-size:11px;color:var(--ink-soft);" id="smoteCountsText">Balanced: 454 / 454 (Orig: 454/346)</span>
             </div>
             
             <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11.5px;text-align:left;">
@@ -429,24 +429,24 @@
                   <th style="padding:4px 0;">ROC-AUC</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="metricsTableBody">
                 <tr style="border-bottom:1px dashed var(--border);">
                   <td style="padding:5px 0;font-weight:600;">Logistic Regression</td>
-                  <td>95.5%</td>
-                  <td>0.9589</td>
-                  <td>0.9943</td>
+                  <td id="metric-lr-acc">95.5%</td>
+                  <td id="metric-lr-f1">0.9589</td>
+                  <td id="metric-lr-auc">0.9943</td>
                 </tr>
                 <tr style="border-bottom:1px dashed var(--border);">
                   <td style="padding:5px 0;font-weight:600;">Random Forest</td>
-                  <td>95.5%</td>
-                  <td>0.9600</td>
-                  <td>0.9932</td>
+                  <td id="metric-rf-acc">95.5%</td>
+                  <td id="metric-rf-f1">0.9600</td>
+                  <td id="metric-rf-auc">0.9932</td>
                 </tr>
                 <tr style="color:var(--navy-900);font-weight:700;">
                   <td style="padding:5px 0;">XGBoost (Best)</td>
-                  <td>96.0%</td>
-                  <td>0.9643</td>
-                  <td>0.9968</td>
+                  <td id="metric-xgboost-acc">96.0%</td>
+                  <td id="metric-xgboost-f1">0.9643</td>
+                  <td id="metric-xgboost-auc">0.9968</td>
                 </tr>
               </tbody>
             </table>
@@ -604,7 +604,7 @@
       <div class="card" id="resultsCard">
         <div class="card-head">
           <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg></div>
-          <div><h3>Risk Assessment</h3><span>Mock output for UX testing</span></div>
+          <div><h3>Risk Assessment</h3><span id="resultsSubtitle">Live ML Assessment</span></div>
         </div>
 
         <div id="emptyState" class="empty-state">
@@ -629,8 +629,14 @@
               <span id="riskBadgeText">Low Risk</span>
             </div>
           </div>
+          <div id="modelInfoRow" style="display:none;margin-top:10px;font-size:11.5px;color:var(--ink-soft);text-align:center;padding:6px 12px;background:var(--blue-100);border-radius:8px;"></div>
 
           <div class="factor-list" id="factorList"></div>
+
+          <div id="loanDetailsSection" style="display:none;margin-top:14px;padding:14px 15px;border:1px solid var(--border);border-radius:11px;background:var(--surface-alt);">
+            <div style="font-size:11px;font-weight:700;color:var(--ink-soft);letter-spacing:0.4px;text-transform:uppercase;margin-bottom:10px;">Financial Analysis</div>
+            <div id="loanDetailsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px;"></div>
+          </div>
 
           <div class="reco-box" id="recoBox"></div>
         </div>
@@ -671,6 +677,9 @@
     showLogin();
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('loanDetailsSection').style.display = 'none';
+    document.getElementById('modelInfoRow').style.display = 'none';
+    document.getElementById('resultsSubtitle').textContent = 'Live ML Assessment';
   });
 
   const assessForm = document.getElementById('assessForm');
@@ -803,6 +812,42 @@
       void rc.offsetWidth;
       rc.classList.add('fade-in');
 
+      // Update results subtitle with live model name
+      const rsEl = document.getElementById('resultsSubtitle');
+      if (rsEl) rsEl.textContent = `${result.modelUsed || result.modelChoice} · Live Assessment`;
+
+      // Show model info row (model name + default probability)
+      const modelInfoRow = document.getElementById('modelInfoRow');
+      if (modelInfoRow) {
+        modelInfoRow.style.display = 'block';
+        modelInfoRow.innerHTML = `Model: <b style="color:var(--navy-900)">${result.modelUsed || result.modelChoice}</b> &nbsp;&middot;&nbsp; Default probability: <b class="mono">${(result.probability * 100).toFixed(1)}%</b>`;
+      }
+
+      // Populate Financial Analysis panel from backend loanDetails
+      if (result.loanDetails) {
+        const ld = result.loanDetails;
+        const ldSection = document.getElementById('loanDetailsSection');
+        const ldGrid   = document.getElementById('loanDetailsGrid');
+        if (ldSection && ldGrid) {
+          ldSection.style.display = 'block';
+          const fmt = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 0});
+          const afColor = ld.affordabilityStatus === 'Affordable' ? 'var(--green)'
+                        : ld.affordabilityStatus === 'Strained'   ? 'var(--amber)'
+                        : 'var(--red)';
+          ldGrid.innerHTML = `
+            <div><span style="color:var(--ink-soft);font-size:11px;">Monthly Income</span><br><b>${fmt(ld.monthlyIncome)}</b></div>
+            <div><span style="color:var(--ink-soft);font-size:11px;">Est. Monthly EMI</span><br><b>${fmt(ld.estimatedEmi)}</b></div>
+            <div><span style="color:var(--ink-soft);font-size:11px;">Total Loan Obligation</span><br><b>${fmt(ld.totalLoanObligation)}</b></div>
+            <div><span style="color:var(--ink-soft);font-size:11px;">Max Eligible Loan</span><br><b>${fmt(ld.maxEligibleLoan)}</b></div>
+            <div style="grid-column:1/-1;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-size:11.5px;">
+              Affordability: <b style="color:${afColor}">${ld.affordabilityStatus}</b>
+              &nbsp;&middot;&nbsp; DTI: <b>${ld.dtiPercentage}%</b>
+              &nbsp;&middot;&nbsp; LTI: <b>${ld.ltiRatio}&times;</b>
+            </div>
+          `;
+        }
+      }
+
       document
         .getElementById('resultsCard')
         .scrollIntoView({
@@ -829,6 +874,61 @@
       `;
     }
   });
+
+  // ============ LOAD LIVE METRICS FROM BACKEND ON PAGE LOAD ============
+  async function loadMetrics() {
+    try {
+      const resp = await fetch('/api/models');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const m  = data.metrics   || {};
+      const si = data.smoteInfo || {};
+
+      // Update SMOTE counts display
+      const smoteEl = document.getElementById('smoteCountsText');
+      if (smoteEl && si.resampled_counts) {
+        const rc = si.resampled_counts;
+        const oc = si.original_counts || {};
+        const orig0 = oc[0] || oc['0'] || 0;
+        const orig1 = oc[1] || oc['1'] || 0;
+        const res0  = rc[0] || rc['0'] || 0;
+        const res1  = rc[1] || rc['1'] || 0;
+        smoteEl.textContent = `Balanced: ${res0} / ${res1} (Orig: ${orig0}/${orig1})`;
+      }
+
+      // Update model comparison table cells
+      ['lr', 'rf', 'xgboost'].forEach(key => {
+        const met = m[key];
+        if (!met) return;
+        const accEl = document.getElementById(`metric-${key}-acc`);
+        const f1El  = document.getElementById(`metric-${key}-f1`);
+        const aucEl = document.getElementById(`metric-${key}-auc`);
+        if (accEl) accEl.textContent = (met.accuracy * 100).toFixed(1) + '%';
+        if (f1El)  f1El.textContent  = met.f1.toFixed(4);
+        if (aucEl) aucEl.textContent = met.auc.toFixed(4);
+      });
+
+      // Update model dropdown labels with live F1 / AUC values
+      const sel = document.getElementById('modelChoice');
+      if (sel) {
+        const nameMap = {
+          xgboost : 'XGBoost Classifier',
+          rf      : 'Random Forest Classifier',
+          lr      : 'Logistic Regression'
+        };
+        const bestKey = data.bestModelKey;
+        sel.querySelectorAll('option').forEach(opt => {
+          const key = opt.value;
+          const met = m[key];
+          if (met) {
+            const tag = key === bestKey ? ' (Recommended)' : '';
+            opt.textContent = `${nameMap[key] || met.name}${tag} · F1: ${(met.f1 * 100).toFixed(1)}% · AUC: ${(met.auc * 100).toFixed(1)}%`;
+          }
+        });
+      }
+    } catch (_) { /* keep static fallback values on network error */ }
+  }
+  document.addEventListener('DOMContentLoaded', loadMetrics);
 </script>
 </body>
 </html>

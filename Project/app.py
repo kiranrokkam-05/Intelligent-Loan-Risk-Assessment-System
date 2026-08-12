@@ -65,6 +65,28 @@ def risk_lens_html():
     return send_from_directory(STATIC_DIR, "riskLens.html")
 
 
+# ============ CORS & HEALTH ENDPOINTS ============
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "RiskLens ML Assessment Backend",
+        "version": "1.0.0",
+        "modelsLoaded": list(pipelines.keys()),
+        "smoteResampling": smote_info.get("method", "Active"),
+        "bestModel": best_key
+    })
+
+
 # ============ METRICS API ENDPOINT ============
 
 @app.route("/api/models", methods=["GET"])
@@ -85,8 +107,9 @@ def assess_risk():
         if not payload:
             return jsonify({"error": "No JSON payload provided"}), 400
 
-        # Model selection: 'xgboost', 'rf', 'lr'
-        model_choice = str(payload.get("modelChoice", best_key)).lower()
+        # Model selection: accepts 'modelChoice' or 'model'
+        raw_model = payload.get("modelChoice") or payload.get("model") or best_key
+        model_choice = str(raw_model).lower()
         if model_choice not in pipelines:
             model_choice = best_key
             
@@ -94,19 +117,19 @@ def assess_risk():
         selected_metrics = metrics.get(model_choice, {})
         model_display_name = selected_metrics.get("name", model_choice.upper())
 
-        # Parse & Map fields
-        age = float(payload.get("age", 30))
+        # Parse & Map fields with safety bounds
+        age = max(18.0, min(100.0, float(payload.get("age", 30))))
         emp_type = str(payload.get("empType", "salaried")).lower()
-        emp_exp_years = float(payload.get("empExp", 5))
-        annual_income = float(payload.get("income", 500000))
-        additional_income = float(payload.get("addIncome", 0))
-        loan_amount = float(payload.get("loanAmt", 500000))
-        loan_term_months = int(payload.get("loanTerm", 36))
+        emp_exp_years = max(0.0, float(payload.get("empExp", 5)))
+        annual_income = max(0.0, float(payload.get("income", 500000)))
+        additional_income = max(0.0, float(payload.get("addIncome", 0)))
+        loan_amount = max(1000.0, float(payload.get("loanAmt", 500000)))
+        loan_term_months = max(1, int(payload.get("loanTerm", 36)))
         loan_purpose = normalize_loan_purpose(payload.get("loanPurpose", "personal"))
-        existing_debt = float(payload.get("debt", 0))
-        monthly_emi = float(payload.get("emi", 0))
-        credit_score = float(payload.get("credit", 650))
-        previous_defaults = int(payload.get("defaults", 0))
+        existing_debt = max(0.0, float(payload.get("debt", 0)))
+        monthly_emi = max(0.0, float(payload.get("emi", 0)))
+        credit_score = max(300.0, min(900.0, float(payload.get("credit", 650))))
+        previous_defaults = max(0, int(payload.get("defaults", 0)))
         repayment_status = str(payload.get("repayStatus", "good")).lower()
 
         # Build single-row pandas DataFrame
@@ -200,6 +223,34 @@ def assess_risk():
         else:
             lti_tier = "good"
 
+        # Financial & Loan Details Analysis
+        tot_income = float(engineered_df["total_income"].iloc[0])
+        monthly_income = tot_income / 12.0 if tot_income > 0 else 1.0
+        
+        # Standard estimated interest rate per year (10.5%)
+        annual_rate = 0.105
+        monthly_rate = annual_rate / 12.0
+        if monthly_rate > 0 and loan_term_months > 0:
+            estimated_emi = loan_amount * monthly_rate * ((1 + monthly_rate)**loan_term_months) / (((1 + monthly_rate)**loan_term_months) - 1)
+        else:
+            estimated_emi = loan_amount / max(1, loan_term_months)
+
+        max_allowed_emi = max(0, (monthly_income * 0.50) - monthly_emi)
+        if monthly_rate > 0 and max_allowed_emi > 0:
+            max_eligible_loan = max_allowed_emi * (((1 + monthly_rate)**loan_term_months) - 1) / (monthly_rate * ((1 + monthly_rate)**loan_term_months))
+        else:
+            max_eligible_loan = max_allowed_emi * loan_term_months
+
+        loan_details_summary = {
+            "monthlyIncome": round(monthly_income, 2),
+            "estimatedEmi": round(estimated_emi, 2),
+            "totalLoanObligation": round(estimated_emi * loan_term_months, 2),
+            "dtiPercentage": round(dti_val, 1),
+            "ltiRatio": round(lti_val, 2),
+            "maxEligibleLoan": round(max(0, max_eligible_loan), 2),
+            "affordabilityStatus": "Affordable" if (monthly_emi + estimated_emi) <= (monthly_income * 0.45) else "Strained" if (monthly_emi + estimated_emi) <= (monthly_income * 0.60) else "Over-Leveraged"
+        }
+
         factors = [
             {"label": "Credit score", "valueText": credit_text, "tier": credit_tier, "iconKey": "credit"},
             {"label": "Debt-to-income", "valueText": f"{dti_val:.0f}%", "tier": dti_tier, "iconKey": "dti"},
@@ -210,7 +261,7 @@ def assess_risk():
         ]
 
         recommendations = {
-            "Low Risk": f"<b>{model_display_name}</b> predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a <b>strong repayment profile</b> and manageable debt exposure. Suitable for <b>standard approval</b>.",
+            "Low Risk": f"<b>{model_display_name}</b> predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a <b>strong repayment profile</b> and manageable debt exposure ({dti_val:.0f}% DTI). Suitable for <b>standard approval</b>.",
             "Medium Risk": f"<b>{model_display_name}</b> predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows <b>mixed risk indicators</b>. Recommend <b>additional income proof</b> or shorter loan tenure.",
             "High Risk": f"<b>{model_display_name}</b> predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend <b>manual underwriter review</b> or collateral requirement."
         }
@@ -223,6 +274,7 @@ def assess_risk():
             "modelUsed": model_display_name,
             "allMetrics": metrics,
             "smoteInfo": smote_info,
+            "loanDetails": loan_details_summary,
             "factors": factors,
             "recommendation": recommendations[category]
         })
@@ -232,11 +284,17 @@ def assess_risk():
 
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    host = os.environ.get("HOST", "0.0.0.0")
+    debug = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
+
     print(f"\n==========================================================")
     print(f" RiskLens ML Backend Server Running!")
     print(f" Models Loaded: Logistic Regression, Random Forest, XGBoost")
     print(f" Resampling: SMOTE Balanced ({smote_info.get('resampled_counts')})")
-    print(f" URL: http://localhost:8000/riskLens.html")
-    print(f" API: http://localhost:8000/api/assess")
+    print(f" Host: {host}:{port}")
+    print(f" Health Check: http://localhost:{port}/api/health")
+    print(f" Assessment API: http://localhost:{port}/api/assess")
     print(f"==========================================================\n")
-    app.run(host="0.0.0.0", port=8000, debug=False)
+    app.run(host=host, port=port, debug=debug)
+
