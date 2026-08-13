@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
@@ -12,9 +14,12 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 # 1. LOAD RAW DATASET
 # ============================================================
 
-df = pd.read_csv(
-    "Semester_project/Intelligent-Loan-Risk-Assessment-System/Project/preprocessing/loan_dataset.csv"
-)
+base_dir = Path(__file__).parent
+dataset_path = base_dir / "preprocessing" / "loan_dataset.csv"
+if not dataset_path.exists():
+    dataset_path = base_dir / "loan_dataset.csv"
+
+df = pd.read_csv(dataset_path)
 
 
 # ============================================================

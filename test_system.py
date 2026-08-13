@@ -13,7 +13,7 @@ import unittest
 import json
 from pathlib import Path
 
-# Ensure Project directory is on Python path
+# Ensure root directory is on Python path
 project_dir = Path(__file__).parent
 if str(project_dir) not in sys.path:
     sys.path.insert(0, str(project_dir))
@@ -35,7 +35,7 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertIn("xgboost", data.get("modelsLoaded", []))
         self.assertIn("rf", data.get("modelsLoaded", []))
         self.assertIn("lr", data.get("modelsLoaded", []))
-        print("✓ Production Health Check Endpoint Verified")
+        print("OK: Production Health Check Endpoint Verified")
 
     def test_model_metrics_endpoint(self):
         """Verify Model Metrics validation endpoint."""
@@ -49,7 +49,7 @@ class TestRiskLensBackend(unittest.TestCase):
         xgb_metrics = data["metrics"].get("xgboost", {})
         self.assertGreaterEqual(xgb_metrics.get("accuracy", 0), 0.90)
         self.assertGreaterEqual(xgb_metrics.get("auc", 0), 0.95)
-        print("✓ Model Metrics Endpoint & Accuracy Benchmarks Verified")
+        print("OK: Model Metrics Endpoint & Accuracy Benchmarks Verified")
 
     def test_realtime_prediction_low_risk(self):
         """Verify real-time prediction for low risk profile."""
@@ -78,7 +78,7 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertEqual(data["category"], "Low Risk")
         self.assertLessEqual(data["score"], 35)
         self.assertEqual(data["loanDetails"]["affordabilityStatus"], "Affordable")
-        print(f"✓ Low Risk Real-Time Assessment Verified (Score: {data['score']}, Category: {data['category']})")
+        print(f"OK: Low Risk Real-Time Assessment Verified (Score: {data['score']}, Category: {data['category']})")
 
     def test_realtime_prediction_high_risk(self):
         """Verify real-time prediction for high risk profile."""
@@ -103,7 +103,7 @@ class TestRiskLensBackend(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data["category"], "High Risk")
         self.assertGreater(data["score"], 60)
-        print(f"✓ High Risk Real-Time Assessment Verified (Score: {data['score']}, Category: {data['category']})")
+        print(f"OK: High Risk Real-Time Assessment Verified (Score: {data['score']}, Category: {data['category']})")
 
     def test_loan_details_calculations(self):
         """Verify Loan Details ratio calculations (DTI, LTI, EMI preview)."""
@@ -128,13 +128,13 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertGreater(loan_det["estimatedEmi"], 0)
         self.assertGreater(loan_det["dtiPercentage"], 0)
         self.assertAlmostEqual(loan_det["ltiRatio"], 0.5, delta=0.1)
-        print(f"✓ Loan Details Ratios Verified: DTI={loan_det['dtiPercentage']}%, LTI={loan_det['ltiRatio']}x, EMI=₹{loan_det['estimatedEmi']}")
+        print(f"OK: Loan Details Ratios Verified: DTI={loan_det['dtiPercentage']}%, LTI={loan_det['ltiRatio']}x, EMI=Rs.{loan_det['estimatedEmi']}")
 
     def test_cors_headers(self):
         """Verify Production Readiness CORS headers."""
         response = self.client.get("/api/health")
         self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
-        print("✓ Production CORS Headers Verified")
+        print("OK: Production CORS Headers Verified")
 
     def test_rejects_incomplete_input(self):
         """Invalid assessment requests must not silently receive defaults."""
