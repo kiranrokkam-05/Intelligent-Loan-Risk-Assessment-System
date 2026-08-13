@@ -1,6 +1,6 @@
 ﻿# Dataset Fields for Model Training
 
-This specification matches the loan application inputs in the current RiskLens UI. The UI is a mock-data prototype; the ML team should use these fields as the agreed input contract when preparing training data and building the prediction API.
+This specification matches the inputs in the integrated RiskLens UI and `POST /api/assess` API. Use these fields as the agreed contract when preparing training data and retraining the prediction pipelines.
 
 ## Required feature columns
 
@@ -22,13 +22,13 @@ This specification matches the loan application inputs in the current RiskLens U
 
 ## Required target column
 
-The target must come from actual loan outcomes, not from the UI mock score.
+The target must come from actual loan outcomes, not from the UI risk score.
 
 | Column | Type | Example | Definition |
 |---|---:|---:|---|
 | `defaulted_within_12_months` | integer / boolean | `0` | `1` if the loan defaulted within 12 months of disbursement; otherwise `0`. |
 
-A binary classifier can predict the probability of `defaulted_within_12_months = 1`. Do **not** train on the UI's mock risk score or category; those are only visual placeholders.
+A binary classifier can predict the probability of `defaulted_within_12_months = 1`. Do **not** train on the UI's displayed risk score or category; those are presentation-layer outputs derived from the model probability.
 
 ## Recommended operational columns
 

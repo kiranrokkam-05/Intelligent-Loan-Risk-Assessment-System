@@ -1,64 +1,34 @@
-﻿# Model Integration Guide
+# Model Integration Guide
 
-The current application is intentionally a frontend-only UX prototype. The browser calculates a mock score only to demonstrate result states. Do not use it for lending decisions.
+The integrated Flask service exposes `POST /api/assess`; the browser uses it from the same origin. Do not use the API as the sole basis for lending decisions.
 
-## 1. ML team's deliverable
+## API contract
 
-Provide a deployed HTTP endpoint, for example `POST /api/assess`.
-
-It should accept JSON with the same fields currently collected by the form:
+`POST /api/assess` accepts JSON with the required application fields:
 
 ```json
-{
-  "age": 32,
-  "empType": "salaried",
-  "empExp": 6,
-  "income": 850000,
-  "addIncome": 50000,
-  "loanAmt": 1200000,
-  "loanTerm": 60,
-  "loanPurpose": "home",
-  "debt": 150000,
-  "emi": 8000,
-  "credit": 712,
-  "defaults": 0,
-  "repayStatus": "good"
-}
+{"age":32,"empType":"salaried","empExp":6,"income":850000,"addIncome":50000,"loanAmt":1200000,"loanTerm":60,"loanPurpose":"home","debt":150000,"emi":8000,"credit":712,"defaults":0,"repayStatus":"good"}
 ```
 
-Return a stable response shape:
+The optional `model` or `modelChoice` selects `xgboost`, `rf`, or `lr`. Successful responses include `apiVersion`, a 0–100 `score`, `category`, `probability`, `factors` (`label`, `valueText`, `tier`, `iconKey`), `loanDetails`, and `recommendation`.
 
-```json
-{
-  "score": 28,
-  "category": "Low Risk",
-  "factors": [{"label": "Credit score", "value": "Strong", "tier": "good"}],
-  "recommendation": "Suitable for standard review."
-}
-```
+Invalid input receives `422` with `{ "error": "..." }`; malformed or missing JSON receives `400`; excessive requests receive `429`.
 
-`category` must be `Low Risk`, `Medium Risk`, or `High Risk`; `tier` must be `good`, `warn`, or `bad`; and `score` must be 0–100.
+## External UI integration
 
-## 2. Where to connect it
-
-In `static/riskLens.html`, find `MOCK SCORING START`. Replace that mock calculation with a `fetch()` call to the ML endpoint. Keep the DOM updates below `MOCK SCORING END`; they render the gauge, badge, factors, and recommendation.
+For a separately hosted UI, configure its exact origin in `ALLOWED_ORIGINS`, then call:
 
 ```js
-const response = await fetch('https://your-api.example.com/api/assess', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify(payload)
+await fetch('https://your-api.example.com/api/assess', {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
 });
-if (!response.ok) throw new Error('Assessment service is unavailable');
-const result = await response.json();
 ```
 
-Map `result.score`, `result.category`, `result.factors`, and `result.recommendation` to the existing UI elements.
+Validate the response before display. The bundled UI is the reference consumer in `static/riskLens.html`.
 
-## 3. Integration checks
+## Deployment checks
 
-1. Enable CORS for the deployed UI origin, or serve the static UI from the same domain as the API.
-2. Validate all input on the server; browser validation is only a UX aid.
-3. Do not expose model files, credentials, or training data in this UI repository.
-4. Add authentication, logging, rate limiting, and privacy controls in the production API layer before handling real applicant information.
-5. Test the API with low-, medium-, high-risk, invalid-input, and timeout responses so every UI state is verified.
+1. Serve the UI from the same domain where possible; otherwise set exact trusted origins in `ALLOWED_ORIGINS`.
+2. Keep input validation, authentication, logging, rate limiting, and privacy controls at the API layer.
+3. Never expose model artifacts, credentials, or training data to clients.
+4. Test valid low-, medium-, and high-risk profiles plus invalid input, rate limits, and service failures.

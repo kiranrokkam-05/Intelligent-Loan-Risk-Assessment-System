@@ -108,13 +108,19 @@ class TestRiskLensBackend(unittest.TestCase):
     def test_loan_details_calculations(self):
         """Verify Loan Details ratio calculations (DTI, LTI, EMI preview)."""
         payload = {
+            "age": 35,
+            "empType": "salaried",
+            "empExp": 8,
             "income": 600000,
             "addIncome": 0,
             "loanAmt": 300000,
             "loanTerm": 24,
             "debt": 60000,
             "emi": 5000,
-            "credit": 720
+            "credit": 720,
+            "defaults": 0,
+            "repayStatus": "good",
+            "loanPurpose": "personal"
         }
         response = self.client.post("/api/assess", data=json.dumps(payload), content_type="application/json")
         data = response.get_json()
@@ -127,8 +133,14 @@ class TestRiskLensBackend(unittest.TestCase):
     def test_cors_headers(self):
         """Verify Production Readiness CORS headers."""
         response = self.client.get("/api/health")
-        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "*")
+        self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
         print("✓ Production CORS Headers Verified")
+
+    def test_rejects_incomplete_input(self):
+        """Invalid assessment requests must not silently receive defaults."""
+        response = self.client.post("/api/assess", json={"age": 17})
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.get_json())
 
 if __name__ == "__main__":
     unittest.main()

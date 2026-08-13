@@ -7,7 +7,10 @@ Run: python app.py
 Open: http://localhost:8000/
 """
 
+import logging
 import os
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 import joblib
 import pandas as pd
@@ -19,13 +22,27 @@ from Model_Logic import add_engineered_features, train_and_evaluate
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 MODEL_PATH = BASE_DIR / "model.joblib"
+ALLOWED_ORIGINS = {
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+}
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+REQUEST_LOG = defaultdict(deque)
+
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 
 
 def load_or_train_models():
     if not MODEL_PATH.exists():
-        print("Model file not found. Running training pipeline...")
+        if os.environ.get("ALLOW_MODEL_TRAINING", "false").lower() not in ("true", "1", "t"):
+            raise RuntimeError(
+                "Model artifact is missing. Deploy model.joblib or set ALLOW_MODEL_TRAINING=true for local development."
+            )
+        logger.warning("Model file not found; running the local training pipeline.")
         train_and_evaluate()
     
     print(f"Loading ML models from {MODEL_PATH}...")
@@ -54,6 +71,56 @@ def normalize_loan_purpose(raw_purpose: str) -> str:
     return "other"
 
 
+def api_error(message: str, status: int):
+    return jsonify({"error": message}), status
+
+
+def parse_number(payload, field, *, minimum=None, maximum=None, integer=False):
+    if field not in payload:
+        raise ValueError(f"Missing required field: {field}")
+    try:
+        value = int(payload[field]) if integer else float(payload[field])
+    except (TypeError, ValueError):
+        raise ValueError(f"{field} must be a valid {'integer' if integer else 'number'}") from None
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{field} must be at least {minimum}")
+    if maximum is not None and value > maximum:
+        raise ValueError(f"{field} must be at most {maximum}")
+    return value
+
+
+def parse_assessment_payload(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("JSON object payload required")
+
+    emp_type = str(payload.get("empType", "")).lower()
+    if emp_type not in {"salaried", "self", "other"}:
+        raise ValueError("empType must be salaried, self, or other")
+    repayment_status = str(payload.get("repayStatus", "")).lower()
+    if repayment_status not in {"excellent", "good", "fair", "poor"}:
+        raise ValueError("repayStatus must be excellent, good, fair, or poor")
+    model_choice = str(payload.get("modelChoice") or payload.get("model") or best_key).lower()
+    if model_choice not in pipelines:
+        raise ValueError(f"model must be one of: {', '.join(sorted(pipelines))}")
+
+    return {
+        "model_choice": model_choice,
+        "age": parse_number(payload, "age", minimum=18, maximum=100),
+        "emp_type": emp_type,
+        "emp_exp_years": parse_number(payload, "empExp", minimum=0, maximum=80),
+        "annual_income": parse_number(payload, "income", minimum=0, maximum=1000000000),
+        "additional_income": parse_number(payload, "addIncome", minimum=0, maximum=1000000000),
+        "loan_amount": parse_number(payload, "loanAmt", minimum=1000, maximum=1000000000),
+        "loan_term_months": parse_number(payload, "loanTerm", minimum=3, maximum=360, integer=True),
+        "loan_purpose": normalize_loan_purpose(payload.get("loanPurpose", "")),
+        "existing_debt": parse_number(payload, "debt", minimum=0, maximum=1000000000),
+        "monthly_emi": parse_number(payload, "emi", minimum=0, maximum=100000000),
+        "credit_score": parse_number(payload, "credit", minimum=300, maximum=900),
+        "previous_defaults": parse_number(payload, "defaults", minimum=0, maximum=50, integer=True),
+        "repayment_status": repayment_status,
+    }
+
+
 # ============ STATIC ROUTES ============
 
 @app.route("/")
@@ -69,10 +136,28 @@ def risk_lens_html():
 
 @app.after_request
 def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    origin = request.headers.get("Origin")
+    if origin and origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
+
+
+@app.before_request
+def enforce_api_rate_limit():
+    if not request.path.startswith("/api/") or request.method == "OPTIONS":
+        return None
+    client = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    now = time.monotonic()
+    requests = REQUEST_LOG[client]
+    while requests and now - requests[0] >= 60:
+        requests.popleft()
+    if len(requests) >= RATE_LIMIT_PER_MINUTE:
+        return api_error("Too many requests. Please try again shortly.", 429)
+    requests.append(now)
+    return None
 
 
 @app.route("/api/health", methods=["GET"])
@@ -100,37 +185,33 @@ def get_model_metrics():
 
 # ============ ML ASSESSMENT ENDPOINT ============
 
-@app.route("/api/assess", methods=["POST"])
+@app.route("/api/assess", methods=["POST", "OPTIONS"])
 def assess_risk():
+    if request.method == "OPTIONS":
+        return ("", 204)
     try:
-        payload = request.get_json(force=True)
-        if not payload:
-            return jsonify({"error": "No JSON payload provided"}), 400
-
-        # Model selection: accepts 'modelChoice' or 'model'
-        raw_model = payload.get("modelChoice") or payload.get("model") or best_key
-        model_choice = str(raw_model).lower()
-        if model_choice not in pipelines:
-            model_choice = best_key
-            
+        payload = request.get_json(silent=True)
+        if payload is None:
+            return api_error("A JSON request body is required", 400)
+        values = parse_assessment_payload(payload)
+        model_choice = values["model_choice"]
         selected_pipeline = pipelines[model_choice]
         selected_metrics = metrics.get(model_choice, {})
         model_display_name = selected_metrics.get("name", model_choice.upper())
 
-        # Parse & Map fields with safety bounds
-        age = max(18.0, min(100.0, float(payload.get("age", 30))))
-        emp_type = str(payload.get("empType", "salaried")).lower()
-        emp_exp_years = max(0.0, float(payload.get("empExp", 5)))
-        annual_income = max(0.0, float(payload.get("income", 500000)))
-        additional_income = max(0.0, float(payload.get("addIncome", 0)))
-        loan_amount = max(1000.0, float(payload.get("loanAmt", 500000)))
-        loan_term_months = max(1, int(payload.get("loanTerm", 36)))
-        loan_purpose = normalize_loan_purpose(payload.get("loanPurpose", "personal"))
-        existing_debt = max(0.0, float(payload.get("debt", 0)))
-        monthly_emi = max(0.0, float(payload.get("emi", 0)))
-        credit_score = max(300.0, min(900.0, float(payload.get("credit", 650))))
-        previous_defaults = max(0, int(payload.get("defaults", 0)))
-        repayment_status = str(payload.get("repayStatus", "good")).lower()
+        age = values["age"]
+        emp_type = values["emp_type"]
+        emp_exp_years = values["emp_exp_years"]
+        annual_income = values["annual_income"]
+        additional_income = values["additional_income"]
+        loan_amount = values["loan_amount"]
+        loan_term_months = values["loan_term_months"]
+        loan_purpose = values["loan_purpose"]
+        existing_debt = values["existing_debt"]
+        monthly_emi = values["monthly_emi"]
+        credit_score = values["credit_score"]
+        previous_defaults = values["previous_defaults"]
+        repayment_status = values["repayment_status"]
 
         # Build single-row pandas DataFrame
         input_data = pd.DataFrame([{
@@ -261,12 +342,14 @@ def assess_risk():
         ]
 
         recommendations = {
-            "Low Risk": f"<b>{model_display_name}</b> predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a <b>strong repayment profile</b> and manageable debt exposure ({dti_val:.0f}% DTI). Suitable for <b>standard approval</b>.",
-            "Medium Risk": f"<b>{model_display_name}</b> predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows <b>mixed risk indicators</b>. Recommend <b>additional income proof</b> or shorter loan tenure.",
-            "High Risk": f"<b>{model_display_name}</b> predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend <b>manual underwriter review</b> or collateral requirement."
+            "Low Risk": f"{model_display_name} predicts a low default risk ({default_prob*100:.1f}% default probability). Applicant shows a strong repayment profile and manageable debt exposure ({dti_val:.0f}% DTI). Suitable for standard review.",
+            "Medium Risk": f"{model_display_name} predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows mixed risk indicators. Recommend additional income proof or a shorter loan tenure.",
+            "High Risk": f"{model_display_name} predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend manual underwriter review or collateral requirements."
         }
 
+        logger.info("Assessment completed: model=%s category=%s", model_choice, category)
         return jsonify({
+            "apiVersion": "1.0",
             "score": score,
             "category": category,
             "probability": round(default_prob, 4),
@@ -279,8 +362,11 @@ def assess_risk():
             "recommendation": recommendations[category]
         })
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except ValueError as exc:
+        return api_error(str(exc), 422)
+    except Exception:
+        logger.exception("Assessment failed")
+        return api_error("Assessment service encountered an unexpected error", 500)
 
 
 if __name__ == "__main__":
