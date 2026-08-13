@@ -285,10 +285,33 @@
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
   @media (max-width:980px){
-    .login-left{display:none;}
     .app-body{grid-template-columns:1fr;}
     .results-sticky{position:static;}
   }
+
+  /* ---------- CLAYMORPHISM THEME ---------- */
+  :root{--bg:#dce8f7;--surface:#e6effb;--surface-alt:#eff6ff;--navy-900:#244264;--navy-800:#365c84;--blue-600:#4b83c5;--blue-100:#d4e4f6;--ink:#274260;--ink-soft:#66809d;--border:rgba(255,255,255,.72);--radius:24px;--shadow:12px 12px 24px rgba(109,137,170,.38),-10px -10px 22px rgba(255,255,255,.78);}
+  body{background:linear-gradient(145deg,#cdddf0 0%,#eaf2fc 50%,#cfdeef 100%);}
+  #loginScreen{display:none!important;}
+  #appScreen{display:flex;min-height:100vh;flex-direction:column;}
+  .topbar{margin:18px auto 0;width:calc(100% - 36px);max-width:1300px;border:1px solid var(--border);border-radius:22px;padding:13px 20px;background:var(--surface);box-shadow:var(--shadow);position:relative;}
+  .brand-mark{border-radius:15px;background:linear-gradient(145deg,#5c9ae1,#3a6fae);box-shadow:5px 5px 10px rgba(68,105,148,.35),-3px -3px 8px rgba(255,255,255,.7);}
+  .brand-name{color:var(--navy-900)!important;}.topbar .brand-sub{display:block;font-size:10px;letter-spacing:1px;}
+  .user-pill{background:var(--surface);border:1px solid var(--border);box-shadow:inset 2px 2px 5px rgba(142,166,195,.22),inset -2px -2px 5px rgba(255,255,255,.9);}
+  .app-body{gap:28px;padding:30px 18px 60px;max-width:1300px;}.page-head{padding:12px 8px;}.page-head h1{font-size:30px;letter-spacing:-.6px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:22px;}.card-head{margin-bottom:20px;}
+  .card-icon{width:40px;height:40px;border-radius:15px;background:linear-gradient(145deg,#f6fbff,#cadbf0);box-shadow:4px 4px 9px rgba(124,151,182,.32),-4px -4px 9px #fff;color:var(--blue-600);}
+  .field label{color:var(--navy-800);font-weight:700;}.input-wrap input,.input-wrap select{border:0;background:var(--surface-alt);border-radius:15px;box-shadow:inset 4px 4px 8px rgba(129,153,181,.25),inset -4px -4px 8px rgba(255,255,255,.85);padding-top:12px;padding-bottom:12px;}
+  .input-wrap input:focus,.input-wrap select:focus{border:0;background:#f7fbff;box-shadow:inset 3px 3px 6px rgba(129,153,181,.2),inset -3px -3px 6px #fff,0 0 0 3px rgba(75,131,197,.2);}
+  .assess-btn{border-radius:17px;background:linear-gradient(145deg,#5a95d7,#3b70ad);box-shadow:7px 7px 14px rgba(86,117,153,.35),-4px -4px 10px rgba(255,255,255,.72);transition:transform .15s,box-shadow .15s;}.assess-btn:hover{background:linear-gradient(145deg,#639fe1,#427ab8);transform:translateY(-2px);}.assess-btn:active{transform:translateY(1px);box-shadow:inset 3px 3px 7px rgba(43,83,128,.35);}
+  .results-sticky{top:24px;}.empty-state,.reco-box,#loanDetailsSection{border-radius:18px!important;background:var(--surface-alt)!important;box-shadow:inset 4px 4px 9px rgba(129,153,181,.18),inset -4px -4px 9px rgba(255,255,255,.9);border:0!important;}.risk-badge{box-shadow:3px 3px 7px rgba(118,143,171,.23),-3px -3px 7px #fff;}#modelInfoRow{background:var(--surface-alt)!important;box-shadow:inset 2px 2px 5px rgba(129,153,181,.16),inset -2px -2px 5px #fff;}
+  #assessmentView{display:none;max-width:780px;width:100%;margin:0 auto;}.assessment-mode .app-body{display:block;max-width:900px;}.assessment-mode .page-head{display:none;}.assessment-mode #inputView{display:none;}.assessment-mode #assessmentView{display:block;}.assessment-mode .results-sticky{position:static;}.back-btn{border:0;border-radius:13px;background:var(--surface-alt);color:var(--navy-900);padding:9px 13px;font-weight:700;display:flex;gap:6px;align-items:center;box-shadow:4px 4px 8px rgba(118,143,171,.22),-3px -3px 7px #fff;}.back-btn:hover{transform:translateY(-1px);}.assessment-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;}.assessment-heading h1{margin:0;color:var(--navy-900);font-size:28px;}
+  /* ---------- VIEWPORT-FIT APPLICATION WORKSPACE ---------- */
+  body{overflow:hidden;}.topbar{display:none!important;}#appScreen{height:100vh;overflow:hidden;}.app-body{display:block;max-width:1420px;height:100vh;padding:26px 30px 22px;overflow:hidden;}.page-head{padding:0 4px 14px;display:flex;align-items:end;justify-content:space-between;}.page-head h1{font-size:28px;}.page-head p{padding-bottom:4px;}
+  #inputView{height:calc(100vh - 102px);}#assessForm{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto 1fr auto;gap:16px;align-items:stretch;}#assessForm>.card{margin:0;padding:17px 18px;overflow:hidden;}#assessForm>.card:first-child{grid-column:1/-1;display:grid;grid-template-columns:1.05fr 1.8fr;gap:18px;align-items:center;}#assessForm>.card:first-child .card-head{margin:0;}#assessForm>.card:first-child .card-head span{display:none;}#assessForm>.card:first-child>div[style*="margin-bottom"]{margin:0!important;}#assessForm>.card:first-child>div:last-child{padding:9px 12px!important;background:var(--surface-alt)!important;}#assessForm>.card:first-child table{display:none;}#assessForm>.card:first-child .input-wrap input,#assessForm>.card:first-child .input-wrap select{padding-top:10px;padding-bottom:10px;}
+  #assessForm>.card:nth-child(2),#assessForm>.card:nth-child(3),#assessForm>.card:nth-child(4){min-height:0;}#assessForm .card-head{margin-bottom:12px;}#assessForm .card-head span{display:none;}#assessForm .grid-2{gap:10px 12px;}#assessForm .field{margin-bottom:10px;}#assessForm .field label{font-size:11px;margin-bottom:4px;}#assessForm .input-wrap input,#assessForm .input-wrap select{font-size:13px;padding:9px 10px 9px 35px;min-height:38px;}#assessForm .input-wrap svg{left:10px;width:15px;height:15px;}#assessBtn{grid-column:1/-1;justify-self:center;width:min(420px,100%);padding:12px 16px;}.assessment-mode .app-body{height:100vh;padding-top:48px;}.assessment-mode #assessmentView{max-height:calc(100vh - 70px);overflow:hidden;}.assessment-mode #resultsCard{max-height:calc(100vh - 145px);overflow:auto;scrollbar-width:none;}.assessment-mode #resultsCard::-webkit-scrollbar{display:none;}
+  @media(max-width:1050px){body,#appScreen{overflow:auto;}.app-body{height:auto;overflow:visible;}#inputView{height:auto;}#assessForm{height:auto;grid-template-columns:1fr 1fr;grid-template-rows:auto;}.assessment-mode .app-body{height:auto;}.assessment-mode #assessmentView{max-height:none;overflow:visible;}.assessment-mode #resultsCard{max-height:none;overflow:visible;}}
+  @media(max-width:640px){.topbar{width:calc(100% - 24px);margin-top:12px}.app-body{padding:24px 12px 44px}.topbar .brand-sub{display:none}.user-pill span{display:none}.card{padding:18px}.page-head h1{font-size:25px}}
 </style>
 </head>
 <body>
@@ -355,6 +378,7 @@
         <span>Demo build &mdash; credentials are pre-filled. Click <b>Sign in</b> to continue to the assessment console.</span>
       </div>
     </div>
+    </div>
   </div>
 </div>
 
@@ -386,7 +410,7 @@
     </div>
 
     <!-- FORM COLUMN -->
-    <div>
+    <div id="inputView">
       <form id="assessForm">
 
         <!-- MEMBER 2 ML MODEL CONFIGURATION & BENCHMARKS -->
@@ -600,6 +624,8 @@
     </div>
 
     <!-- RESULTS COLUMN -->
+    <div id="assessmentView">
+      <div class="assessment-heading"><div><h1>Risk Assessment</h1><p>Live model-based applicant profile</p></div><button class="back-btn" type="button" id="backToInputs"><svg class="icon" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>Back to inputs</button></div>
     <div class="results-sticky">
       <div class="card" id="resultsCard">
         <div class="card-head">
@@ -646,42 +672,6 @@
 </div>
 
 <script>
-  const loginForm = document.getElementById('loginForm');
-  const loginScreen = document.getElementById('loginScreen');
-  const appScreen = document.getElementById('appScreen');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const loginError = document.getElementById('loginError');
-  const loginBtn = document.getElementById('loginBtn');
-
-  function showLogin(){
-    appScreen.style.display = 'none';
-    loginScreen.style.display = 'flex';
-    requestAnimationFrame(() => loginScreen.style.opacity = '1');
-  }
-  function showApp(){
-    loginScreen.style.opacity = '0';
-    setTimeout(() => {
-      loginScreen.style.display = 'none';
-      appScreen.style.display = 'flex';
-    }, 250);
-  }
-
-  // Demo sign-in is local only; no account or server is required.
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    loginError.style.display = 'none';
-    showApp();
-  });
-
-  logoutBtn.addEventListener('click', () => {
-    showLogin();
-    document.getElementById('emptyState').style.display = 'block';
-    document.getElementById('resultContent').style.display = 'none';
-    document.getElementById('loanDetailsSection').style.display = 'none';
-    document.getElementById('modelInfoRow').style.display = 'none';
-    document.getElementById('resultsSubtitle').textContent = 'Live ML Assessment';
-  });
-
   const assessForm = document.getElementById('assessForm');
   const needle = document.getElementById('needle');
   const scoreText = document.getElementById('scoreText');
@@ -689,6 +679,18 @@
   const riskBadgeText = document.getElementById('riskBadgeText');
   const factorList = document.getElementById('factorList');
   const recoBox = document.getElementById('recoBox');
+  const appScreen = document.getElementById('appScreen');
+  const backToInputs = document.getElementById('backToInputs');
+
+  function showAssessmentView() {
+    appScreen.classList.add('assessment-mode');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  backToInputs.addEventListener('click', () => {
+    appScreen.classList.remove('assessment-mode');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   function iconMini(path){
     return `<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;">${path}</svg>`;
@@ -799,7 +801,7 @@
         });
       }
 
-      recoBox.innerHTML =
+      recoBox.textContent =
         result.recommendation ||
         'Assessment completed successfully.';
 
@@ -812,6 +814,8 @@
       void rc.offsetWidth;
       rc.classList.add('fade-in');
 
+      showAssessmentView();
+
       // Update results subtitle with live model name
       const rsEl = document.getElementById('resultsSubtitle');
       if (rsEl) rsEl.textContent = `${result.modelUsed || result.modelChoice} · Live Assessment`;
@@ -820,7 +824,7 @@
       const modelInfoRow = document.getElementById('modelInfoRow');
       if (modelInfoRow) {
         modelInfoRow.style.display = 'block';
-        modelInfoRow.innerHTML = `Model: <b style="color:var(--navy-900)">${result.modelUsed || result.modelChoice}</b> &nbsp;&middot;&nbsp; Default probability: <b class="mono">${(result.probability * 100).toFixed(1)}%</b>`;
+        modelInfoRow.textContent = `Model: ${result.modelUsed || result.modelChoice} · Default probability: ${(result.probability * 100).toFixed(1)}%`;
       }
 
       // Populate Financial Analysis panel from backend loanDetails
@@ -847,13 +851,6 @@
           `;
         }
       }
-
-      document
-        .getElementById('resultsCard')
-        .scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest'
-        });
 
     } catch (err) {
       assessError.textContent =
