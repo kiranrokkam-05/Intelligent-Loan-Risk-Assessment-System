@@ -312,6 +312,78 @@
   #assessForm>.card:nth-child(2),#assessForm>.card:nth-child(3),#assessForm>.card:nth-child(4){min-height:0;}#assessForm .card-head{margin-bottom:12px;}#assessForm .card-head span{display:none;}#assessForm .grid-2{gap:10px 12px;}#assessForm .field{margin-bottom:10px;}#assessForm .field label{font-size:11px;margin-bottom:4px;}#assessForm .input-wrap input,#assessForm .input-wrap select{font-size:13px;padding:9px 10px 9px 35px;min-height:38px;}#assessForm .input-wrap svg{left:10px;width:15px;height:15px;}#assessBtn{grid-column:1/-1;justify-self:center;width:min(420px,100%);padding:12px 16px;}.assessment-mode .app-body{height:100vh;padding-top:48px;}.assessment-mode #assessmentView{max-height:calc(100vh - 70px);overflow:hidden;}.assessment-mode #resultsCard{max-height:calc(100vh - 145px);overflow:auto;scrollbar-width:none;}.assessment-mode #resultsCard::-webkit-scrollbar{display:none;}
   @media(max-width:1050px){body,#appScreen{overflow:auto;}.app-body{height:auto;overflow:visible;}#inputView{height:auto;}#assessForm{height:auto;grid-template-columns:1fr 1fr;grid-template-rows:auto;}.assessment-mode .app-body{height:auto;}.assessment-mode #assessmentView{max-height:none;overflow:visible;}.assessment-mode #resultsCard{max-height:none;overflow:visible;}}
   @media(max-width:640px){.topbar{width:calc(100% - 24px);margin-top:12px}.app-body{padding:24px 12px 44px}.topbar .brand-sub{display:none}.user-pill span{display:none}.card{padding:18px}.page-head h1{font-size:25px}}
+
+  /* Skeleton Loading Styles */
+  .skeleton-loader {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, var(--surface-alt) 25%, var(--border) 50%, var(--surface-alt) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer-anim 1.4s infinite ease-in-out;
+  }
+  @keyframes skeleton-shimmer-anim {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+  }
+  .skeleton-text {
+    height: 16px;
+    border-radius: 4px;
+  }
+  .skeleton-text.header {
+    height: 22px;
+    width: 60%;
+    margin: 0 auto;
+  }
+  .skeleton-text.sub {
+    height: 12px;
+    width: 40%;
+    margin: 8px auto 16px;
+  }
+  .skeleton-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 11px;
+    padding: 12px 14px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+  }
+  .skeleton-row-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 70%;
+  }
+  .skeleton-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+  }
+  .skeleton-label {
+    height: 14px;
+    width: 50%;
+    border-radius: 4px;
+  }
+  .skeleton-value {
+    height: 14px;
+    width: 20%;
+    border-radius: 4px;
+  }
+  .skeleton-box {
+    height: 90px;
+    border-radius: 11px;
+    width: 100%;
+  }
 </style>
 </head>
 <body>
@@ -639,6 +711,37 @@
           <p>Fill in the applicant's details and click<br><b>Assess Risk</b> to generate a score.</p>
         </div>
 
+        <!-- SKELETON LOADER -->
+        <div id="skeletonLoader" class="skeleton-loader" style="display:none;">
+          <div class="skeleton-circle skeleton-shimmer"></div>
+          <div class="skeleton-text header skeleton-shimmer"></div>
+          <div class="skeleton-text sub skeleton-shimmer"></div>
+          
+          <div class="skeleton-row">
+            <div class="skeleton-row-left">
+              <div class="skeleton-icon skeleton-shimmer"></div>
+              <div class="skeleton-label skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-value skeleton-shimmer"></div>
+          </div>
+          <div class="skeleton-row">
+            <div class="skeleton-row-left">
+              <div class="skeleton-icon skeleton-shimmer"></div>
+              <div class="skeleton-label skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-value skeleton-shimmer"></div>
+          </div>
+          <div class="skeleton-row">
+            <div class="skeleton-row-left">
+              <div class="skeleton-icon skeleton-shimmer"></div>
+              <div class="skeleton-label skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-value skeleton-shimmer"></div>
+          </div>
+          
+          <div class="skeleton-box skeleton-shimmer" style="margin-top: 14px;"></div>
+        </div>
+
         <div id="resultContent" style="display:none;">
           <div class="gauge-wrap">
             <svg id="gaugeSvg" viewBox="0 0 200 120" style="width:220px;">
@@ -732,6 +835,22 @@
     assessBtn.style.opacity = '0.7';
     assessBtn.textContent = 'Assessing...';
 
+    const es = document.getElementById('emptyState');
+    const rc = document.getElementById('resultContent');
+    const sk = document.getElementById('skeletonLoader');
+    const ldSection = document.getElementById('loanDetailsSection');
+    const modelInfoRow = document.getElementById('modelInfoRow');
+
+    // Reset previous states and show skeleton loader
+    if (es) es.style.display = 'none';
+    if (rc) rc.style.display = 'none';
+    if (ldSection) ldSection.style.display = 'none';
+    if (modelInfoRow) modelInfoRow.style.display = 'none';
+    if (sk) sk.style.display = 'flex';
+
+    // Switch view immediately to let the user see the loading progression
+    showAssessmentView();
+
     try {
       const payload = {
         age: Number(document.getElementById('age').value),
@@ -805,23 +924,20 @@
         result.recommendation ||
         'Assessment completed successfully.';
 
-      document.getElementById('emptyState').style.display = 'none';
-
-      const rc = document.getElementById('resultContent');
-      rc.style.display = 'block';
-
-      rc.classList.remove('fade-in');
-      void rc.offsetWidth;
-      rc.classList.add('fade-in');
-
-      showAssessmentView();
+      // Hide skeleton loader and show actual results
+      if (sk) sk.style.display = 'none';
+      if (rc) {
+        rc.style.display = 'block';
+        rc.classList.remove('fade-in');
+        void rc.offsetWidth;
+        rc.classList.add('fade-in');
+      }
 
       // Update results subtitle with live model name
       const rsEl = document.getElementById('resultsSubtitle');
       if (rsEl) rsEl.textContent = `${result.modelUsed || result.modelChoice} · Live Assessment`;
 
       // Show model info row (model name + default probability)
-      const modelInfoRow = document.getElementById('modelInfoRow');
       if (modelInfoRow) {
         modelInfoRow.style.display = 'block';
         modelInfoRow.textContent = `Model: ${result.modelUsed || result.modelChoice} · Default probability: ${(result.probability * 100).toFixed(1)}%`;
@@ -830,7 +946,6 @@
       // Populate Financial Analysis panel from backend loanDetails
       if (result.loanDetails) {
         const ld = result.loanDetails;
-        const ldSection = document.getElementById('loanDetailsSection');
         const ldGrid   = document.getElementById('loanDetailsGrid');
         if (ldSection && ldGrid) {
           ldSection.style.display = 'block';
@@ -853,9 +968,12 @@
       }
 
     } catch (err) {
-      assessError.textContent =
-        'Assessment Failed: ' + err.message;
+      if (sk) sk.style.display = 'none';
+      if (es) es.style.display = 'block';
 
+      // Revert screen mode to inputs to show the error alert clearly
+      appScreen.classList.remove('assessment-mode');
+      assessError.textContent = 'Assessment Failed: ' + err.message;
       assessError.style.display = 'block';
 
     } finally {
