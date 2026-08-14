@@ -6,15 +6,19 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
 
 
 # ============================================================
 # 1. LOAD RAW DATASET
 # ============================================================
 
-base_dir = Path(__file__).parent
+base_dir = Path(__file__).parent.parent
 dataset_path = base_dir / "preprocessing" / "loan_dataset.csv"
 if not dataset_path.exists():
     dataset_path = base_dir / "loan_dataset.csv"
@@ -30,7 +34,7 @@ df = df.drop("application_id", axis=1)
 
 
 # ============================================================
-# 3. SEPARATE INPUTS AND OUTPUT
+# 3. SEPARATE INPUT AND TARGET
 # ============================================================
 
 X = df.drop("defaulted_within_12_months", axis=1)
@@ -86,11 +90,14 @@ preprocessor = ColumnTransformer(
 
 
 # ============================================================
-# 6. KNN MODEL
+# 6. RANDOM FOREST MODEL
 # ============================================================
 
-knn = KNeighborsClassifier(
-    n_neighbors=5
+rf = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=None,
+    random_state=42,
+    class_weight="balanced"
 )
 
 
@@ -101,7 +108,7 @@ knn = KNeighborsClassifier(
 model = Pipeline(
     steps=[
         ("preprocessing", preprocessor),
-        ("knn", knn)
+        ("random_forest", rf)
     ]
 )
 
@@ -123,14 +130,19 @@ X_train, X_test, y_train, y_test = train_test_split(
 # 9. TRAIN MODEL
 # ============================================================
 
-model.fit(X_train, y_train)
+model.fit(
+    X_train,
+    y_train
+)
 
 
 # ============================================================
 # 10. TEST MODEL
 # ============================================================
 
-y_pred = model.predict(X_test)
+y_pred = model.predict(
+    X_test
+)
 
 
 # ============================================================
@@ -148,24 +160,34 @@ accuracy = accuracy_score(
 # ============================================================
 
 print("====================================")
-print("          KNN MODEL RESULTS")
+print("       RANDOM FOREST RESULTS")
 print("====================================")
 
 print("\nAccuracy:")
 print(accuracy)
 
 print("\nClassification Report:")
-print(classification_report(y_test, y_pred))
+print(
+    classification_report(
+        y_test,
+        y_pred
+    )
+)
 
 print("\nConfusion Matrix:")
-print(confusion_matrix(y_test, y_pred))
+print(
+    confusion_matrix(
+        y_test,
+        y_pred
+    )
+)
 
 
 # ============================================================
-# 13. KNN PREDICTION FUNCTION
+# 13. RANDOM FOREST PREDICTION FUNCTION
 # ============================================================
 
-def predict_knn(
+def predict_random_forest(
     age,
     emp_type,
     emp_exp_years,

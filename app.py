@@ -17,11 +17,11 @@ import pandas as pd
 import numpy as np
 from flask import Flask, request, jsonify, send_from_directory
 
-from Model_Logic import add_engineered_features, train_and_evaluate
+from models.Model_Logic import add_engineered_features, train_and_evaluate
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-MODEL_PATH = BASE_DIR / "model.joblib"
+MODEL_PATH = BASE_DIR / "models" / "model.joblib"
 ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")

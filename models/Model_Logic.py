@@ -46,9 +46,10 @@ def add_engineered_features(data: pd.DataFrame) -> pd.DataFrame:
 
 def train_and_evaluate():
     base_dir = Path(__file__).parent
-    dataset_path = base_dir / "preprocessing" / "loan_dataset.csv"
+    root_dir = base_dir.parent
+    dataset_path = root_dir / "preprocessing" / "loan_dataset.csv"
     if not dataset_path.exists():
-        dataset_path = base_dir / "loan_dataset.csv"
+        dataset_path = root_dir / "loan_dataset.csv"
         
     print(f"Loading raw dataset from: {dataset_path}")
     raw_df = pd.read_csv(dataset_path)
