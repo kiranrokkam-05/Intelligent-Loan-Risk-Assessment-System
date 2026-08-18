@@ -516,11 +516,6 @@
     </div>
 
     <div>
-      <div class="model-chips">
-        <span class="chip" style="border-color:#1B8F5F;color:#4ADE80;background:rgba(27,143,95,0.15);">Ã¢Å“â€œ ML Model Connected</span>
-        <span class="chip">XGBoost Classifier</span>
-        <span class="chip">SMOTE Balanced</span>
-      </div>
       <div class="login-foot" style="margin-top:34px;">&copy; 2026 RiskLens &middot; Internal Underwriting Console</div>
     </div>
   </div>
@@ -592,69 +587,7 @@
     <div id="inputView">
       <form id="assessForm">
 
-        <!-- MEMBER 2 ML MODEL CONFIGURATION & BENCHMARKS -->
-        <div class="card" style="border:2px solid var(--blue-600);background:#F0F6FC;">
-          <div class="card-head">
-            <div class="card-icon" style="background:var(--navy-900);color:#fff;"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-            <div>
-              <h3 style="color:var(--navy-900);">ML Classifier &amp; SMOTE Configuration</h3>
-              <span>Member 2: Logistic Regression, Random Forest &amp; XGBoost with SMOTE Resampling</span>
-            </div>
-          </div>
-
-          <div style="margin-bottom:16px;">
-            <label for="modelChoice" style="display:block;font-size:12.5px;font-weight:700;color:var(--navy-900);margin-bottom:6px;">
-              Select Machine Learning Algorithm:
-            </label>
-            <div class="input-wrap">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
-              <select id="modelChoice" style="font-weight:600;color:var(--navy-900);background:#fff;border-color:var(--blue-600);">
-                <option value="xgboost" selected>XGBoost Classifier (Recommended Â· F1-Score: 96.4% Â· ROC-AUC: 99.7%)</option>
-                <option value="rf">Random Forest Classifier (F1-Score: 96.0% Â· ROC-AUC: 99.3%)</option>
-                <option value="lr">Logistic Regression (F1-Score: 95.9% Â· ROC-AUC: 99.4%)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- SMOTE & MODEL COMPARISON TABLE -->
-          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-weight:700;color:var(--green);"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M4 12l6 6L20 6"/></svg>SMOTE Resampling Active</span>
-              <span class="mono" style="font-size:11px;color:var(--ink-soft);" id="smoteCountsText">Balanced: 454 / 454 (Orig: 454/346)</span>
-            </div>
-            
-            <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11.5px;text-align:left;">
-              <thead>
-                <tr style="border-bottom:1px solid var(--border);color:var(--ink-soft);">
-                  <th style="padding:4px 0;">Model</th>
-                  <th style="padding:4px 0;">Accuracy</th>
-                  <th style="padding:4px 0;">F1-Score</th>
-                  <th style="padding:4px 0;">ROC-AUC</th>
-                </tr>
-              </thead>
-              <tbody id="metricsTableBody">
-                <tr style="border-bottom:1px dashed var(--border);">
-                  <td style="padding:5px 0;font-weight:600;">Logistic Regression</td>
-                  <td id="metric-lr-acc">95.5%</td>
-                  <td id="metric-lr-f1">0.9589</td>
-                  <td id="metric-lr-auc">0.9943</td>
-                </tr>
-                <tr style="border-bottom:1px dashed var(--border);">
-                  <td style="padding:5px 0;font-weight:600;">Random Forest</td>
-                  <td id="metric-rf-acc">95.5%</td>
-                  <td id="metric-rf-f1">0.9600</td>
-                  <td id="metric-rf-auc">0.9932</td>
-                </tr>
-                <tr style="color:var(--navy-900);font-weight:700;">
-                  <td style="padding:5px 0;">XGBoost (Best)</td>
-                  <td id="metric-xgboost-acc">96.0%</td>
-                  <td id="metric-xgboost-f1">0.9643</td>
-                  <td id="metric-xgboost-auc">0.9968</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <input type="hidden" id="modelChoice" value="xgboost">
 
         <div class="card">
           <div class="card-head">
@@ -809,7 +742,7 @@
       <div class="card" id="resultsCard">
         <div class="card-head">
           <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg></div>
-          <div><h3>Risk Assessment</h3><span id="resultsSubtitle">Live ML Assessment</span></div>
+          <div><h3>Risk Assessment</h3><span id="resultsSubtitle">Live Assessment</span></div>
         </div>
 
         <div id="emptyState" class="empty-state">
@@ -866,7 +799,7 @@
               <span id="riskBadgeText">Low Risk</span>
             </div>
           </div>
-          <div id="modelInfoRow" style="display:none;margin-top:10px;font-size:11.5px;color:var(--ink-soft);text-align:center;padding:6px 12px;background:var(--blue-100);border-radius:8px;"></div>
+
 
           <div class="factor-list" id="factorList"></div>
 
@@ -947,13 +880,13 @@
     const rc = document.getElementById('resultContent');
     const sk = document.getElementById('skeletonLoader');
     const ldSection = document.getElementById('loanDetailsSection');
-    const modelInfoRow = document.getElementById('modelInfoRow');
+
 
     // Reset previous states and show loading animation
     if (es) es.style.display = 'none';
     if (rc) rc.style.display = 'none';
     if (ldSection) ldSection.style.display = 'none';
-    if (modelInfoRow) modelInfoRow.style.display = 'none';
+
     if (sk) sk.style.display = 'flex';
 
     // Reset loader state
@@ -1082,15 +1015,7 @@
         rc.classList.add('fade-in');
       }
 
-      // Update results subtitle with live model name
-      const rsEl = document.getElementById('resultsSubtitle');
-      if (rsEl) rsEl.textContent = `${result.modelUsed || result.modelChoice} · Live Assessment`;
 
-      // Show model info row (model name + default probability)
-      if (modelInfoRow) {
-        modelInfoRow.style.display = 'block';
-        modelInfoRow.textContent = `Model: ${result.modelUsed || result.modelChoice} · Default probability: ${(result.probability * 100).toFixed(1)}%`;
-      }
 
       // Populate Financial Analysis panel from backend loanDetails
       if (result.loanDetails) {
@@ -1139,60 +1064,7 @@
     }
   });
 
-  // ============ LOAD LIVE METRICS FROM BACKEND ON PAGE LOAD ============
-  async function loadMetrics() {
-    try {
-      const resp = await fetch('/api/models');
-      if (!resp.ok) return;
-      const data = await resp.json();
-      const m  = data.metrics   || {};
-      const si = data.smoteInfo || {};
 
-      // Update SMOTE counts display
-      const smoteEl = document.getElementById('smoteCountsText');
-      if (smoteEl && si.resampled_counts) {
-        const rc = si.resampled_counts;
-        const oc = si.original_counts || {};
-        const orig0 = oc[0] || oc['0'] || 0;
-        const orig1 = oc[1] || oc['1'] || 0;
-        const res0  = rc[0] || rc['0'] || 0;
-        const res1  = rc[1] || rc['1'] || 0;
-        smoteEl.textContent = `Balanced: ${res0} / ${res1} (Orig: ${orig0}/${orig1})`;
-      }
-
-      // Update model comparison table cells
-      ['lr', 'rf', 'xgboost'].forEach(key => {
-        const met = m[key];
-        if (!met) return;
-        const accEl = document.getElementById(`metric-${key}-acc`);
-        const f1El  = document.getElementById(`metric-${key}-f1`);
-        const aucEl = document.getElementById(`metric-${key}-auc`);
-        if (accEl) accEl.textContent = (met.accuracy * 100).toFixed(1) + '%';
-        if (f1El)  f1El.textContent  = met.f1.toFixed(4);
-        if (aucEl) aucEl.textContent = met.auc.toFixed(4);
-      });
-
-      // Update model dropdown labels with live F1 / AUC values
-      const sel = document.getElementById('modelChoice');
-      if (sel) {
-        const nameMap = {
-          xgboost : 'XGBoost Classifier',
-          rf      : 'Random Forest Classifier',
-          lr      : 'Logistic Regression'
-        };
-        const bestKey = data.bestModelKey;
-        sel.querySelectorAll('option').forEach(opt => {
-          const key = opt.value;
-          const met = m[key];
-          if (met) {
-            const tag = key === bestKey ? ' (Recommended)' : '';
-            opt.textContent = `${nameMap[key] || met.name}${tag} · F1: ${(met.f1 * 100).toFixed(1)}% · AUC: ${(met.auc * 100).toFixed(1)}%`;
-          }
-        });
-      }
-    } catch (_) { /* keep static fallback values on network error */ }
-  }
-  document.addEventListener('DOMContentLoaded', loadMetrics);
 </script>
 </body>
 </html>
