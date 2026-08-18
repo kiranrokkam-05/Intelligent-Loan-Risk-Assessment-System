@@ -249,67 +249,168 @@
   .empty-state h3{color:var(--ink);font-size:15px;margin:0 0 6px;}
   .empty-state p{font-size:13px;margin:0;line-height:1.5;}
 
+  /* ---- Results 2-Column Layout ---- */
+  .results-grid{
+    display:grid;
+    grid-template-columns:1fr 1.3fr;
+    gap:22px;
+    align-items:start;
+  }
+  .results-left{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .results-right{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  /* Score card */
+  .score-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:28px 24px 24px;
+    text-align:center;
+  }
+
   .gauge-wrap{display:flex;flex-direction:column;align-items:center;padding-top:6px;}
-  .gauge-score{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:600;margin-top:-46px;}
-  .gauge-label{font-size:12px;color:var(--ink-soft);letter-spacing:0.4px;text-transform:uppercase;margin-top:2px;}
+  .gauge-score{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;margin-top:-48px;letter-spacing:-1px;}
+  .gauge-label{font-size:11.5px;color:var(--ink-soft);letter-spacing:0.5px;text-transform:uppercase;margin-top:4px;}
   .risk-badge{
-    margin-top:14px;padding:7px 18px;border-radius:999px;
-    font-weight:700;font-size:13.5px;letter-spacing:0.3px;
-    display:flex;align-items:center;gap:7px;
+    margin-top:16px;padding:8px 22px;border-radius:999px;
+    font-weight:700;font-size:14px;letter-spacing:0.3px;
+    display:inline-flex;align-items:center;gap:8px;
   }
   .risk-low{background:var(--green-bg);color:var(--green);}
   .risk-medium{background:var(--amber-bg);color:var(--amber);}
   .risk-high{background:var(--red-bg);color:var(--red);}
 
-  .factor-list{margin-top:22px;display:flex;flex-direction:column;gap:10px;}
+  /* Verdict card */
+  .verdict-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .verdict-card .verdict-title{
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    letter-spacing:0.5px;text-transform:uppercase;margin:0 0 12px;
+  }
+  .verdict-card .reco-text{
+    font-size:13.5px;line-height:1.6;color:var(--ink);margin:0;
+  }
+
+  /* Section panel (factors, financial) */
+  .result-panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px 22px;
+  }
+  .panel-title{
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    letter-spacing:0.5px;text-transform:uppercase;margin:0 0 14px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .panel-title svg{width:15px;height:15px;stroke:var(--ink-soft);fill:none;stroke-width:1.8;}
+
+  .factor-list{display:flex;flex-direction:column;gap:8px;}
   .factor{
     display:flex;align-items:center;justify-content:space-between;
-    padding:10px 13px;border-radius:10px;background:var(--surface-alt);
+    padding:10px 14px;border-radius:12px;background:var(--surface-alt);
     border:1px solid var(--border);
     font-size:13px;
   }
   .factor .flabel{display:flex;align-items:center;gap:9px;color:var(--ink);}
-  .factor .fval{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;padding:3px 9px;border-radius:6px;}
+  .factor .fval{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;padding:4px 10px;border-radius:8px;}
   .fgood{background:var(--green-bg);color:var(--green);}
   .fwarn{background:var(--amber-bg);color:var(--amber);}
   .fbad{background:var(--red-bg);color:var(--red);}
 
-  .reco-box{
-    margin-top:20px;padding:14px 15px;border-radius:11px;
-    border:1px solid var(--border);background:var(--surface-alt);
-    font-size:13px;line-height:1.55;color:var(--ink);
+  /* Financial details grid */
+  .fin-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
   }
-  .reco-box b{color:var(--navy-900);}
+  .fin-item{
+    padding:12px 14px;
+    background:var(--surface-alt);
+    border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .fin-item .fin-label{
+    font-size:11px;color:var(--ink-soft);margin:0 0 4px;
+  }
+  .fin-item .fin-value{
+    font-size:15px;font-weight:700;color:var(--ink);margin:0;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .fin-summary{
+    grid-column:1/-1;
+    padding:10px 14px;
+    background:var(--surface-alt);
+    border:1px solid var(--border);
+    border-radius:12px;
+    font-size:12.5px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .fin-tag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-weight:600;
+  }
 
-  .fade-in{animation:fadeIn .4s ease both;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .fade-in{animation:fadeIn .45s ease both;}
+  .fade-in-delay-1{animation:fadeIn .45s ease .1s both;}
+  .fade-in-delay-2{animation:fadeIn .45s ease .2s both;}
+  .fade-in-delay-3{animation:fadeIn .45s ease .3s both;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
   @media (max-width:980px){
     .app-body{grid-template-columns:1fr;}
     .results-sticky{position:static;}
+    .results-grid{grid-template-columns:1fr;}
   }
 
-  /* ---------- CLAYMORPHISM THEME ---------- */
-  :root{--bg:#dce8f7;--surface:#e6effb;--surface-alt:#eff6ff;--navy-900:#244264;--navy-800:#365c84;--blue-600:#4b83c5;--blue-100:#d4e4f6;--ink:#274260;--ink-soft:#66809d;--border:rgba(255,255,255,.72);--radius:24px;--shadow:12px 12px 24px rgba(109,137,170,.38),-10px -10px 22px rgba(255,255,255,.78);}
-  body{background:linear-gradient(145deg,#cdddf0 0%,#eaf2fc 50%,#cfdeef 100%);}
+  /* ---------- BANKING THEME ---------- */
+  :root{--bg:#F0F2F5;--surface:#FFFFFF;--surface-alt:#F7F8FA;--navy-900:#0C1F3F;--navy-800:#1A3260;--blue-600:#1A5DAB;--blue-100:#E8F0FA;--ink:#1A2332;--ink-soft:#5F6B7A;--border:#E2E6EC;--green:#0D7A4F;--green-bg:#E6F4ED;--amber:#9A6B0A;--amber-bg:#FDF3E0;--red:#C0392B;--red-bg:#FDECEA;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04);}
+  body{background:var(--bg);}
   #loginScreen{display:none!important;}
   #appScreen{display:flex;min-height:100vh;flex-direction:column;}
-  .topbar{margin:18px auto 0;width:calc(100% - 36px);max-width:1300px;border:1px solid var(--border);border-radius:22px;padding:13px 20px;background:var(--surface);box-shadow:var(--shadow);position:relative;}
-  .brand-mark{border-radius:15px;background:linear-gradient(145deg,#5c9ae1,#3a6fae);box-shadow:5px 5px 10px rgba(68,105,148,.35),-3px -3px 8px rgba(255,255,255,.7);}
-  .brand-name{color:var(--navy-900)!important;}.topbar .brand-sub{display:block;font-size:10px;letter-spacing:1px;}
-  .user-pill{background:var(--surface);border:1px solid var(--border);box-shadow:inset 2px 2px 5px rgba(142,166,195,.22),inset -2px -2px 5px rgba(255,255,255,.9);}
-  .app-body{gap:28px;padding:30px 18px 60px;max-width:1300px;}.page-head{padding:12px 8px;}.page-head h1{font-size:30px;letter-spacing:-.6px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:22px;}.card-head{margin-bottom:20px;}
-  .card-icon{width:40px;height:40px;border-radius:15px;background:linear-gradient(145deg,#f6fbff,#cadbf0);box-shadow:4px 4px 9px rgba(124,151,182,.32),-4px -4px 9px #fff;color:var(--blue-600);}
-  .field label{color:var(--navy-800);font-weight:700;}.input-wrap input,.input-wrap select{border:0;background:var(--surface-alt);border-radius:15px;box-shadow:inset 4px 4px 8px rgba(129,153,181,.25),inset -4px -4px 8px rgba(255,255,255,.85);padding-top:12px;padding-bottom:12px;}
-  .input-wrap input:focus,.input-wrap select:focus{border:0;background:#f7fbff;box-shadow:inset 3px 3px 6px rgba(129,153,181,.2),inset -3px -3px 6px #fff,0 0 0 3px rgba(75,131,197,.2);}
-  .assess-btn{border-radius:17px;background:linear-gradient(145deg,#5a95d7,#3b70ad);box-shadow:7px 7px 14px rgba(86,117,153,.35),-4px -4px 10px rgba(255,255,255,.72);transition:transform .15s,box-shadow .15s;}.assess-btn:hover{background:linear-gradient(145deg,#639fe1,#427ab8);transform:translateY(-2px);}.assess-btn:active{transform:translateY(1px);box-shadow:inset 3px 3px 7px rgba(43,83,128,.35);}
-  .results-sticky{top:24px;}.empty-state,.reco-box,#loanDetailsSection{border-radius:18px!important;background:var(--surface-alt)!important;box-shadow:inset 4px 4px 9px rgba(129,153,181,.18),inset -4px -4px 9px rgba(255,255,255,.9);border:0!important;}.risk-badge{box-shadow:3px 3px 7px rgba(118,143,171,.23),-3px -3px 7px #fff;}#modelInfoRow{background:var(--surface-alt)!important;box-shadow:inset 2px 2px 5px rgba(129,153,181,.16),inset -2px -2px 5px #fff;}
-  #assessmentView{display:none;max-width:780px;width:100%;margin:0 auto;}.assessment-mode .app-body{display:block;max-width:900px;}.assessment-mode .page-head{display:none;}.assessment-mode #inputView{display:none;}.assessment-mode #assessmentView{display:block;}.assessment-mode .results-sticky{position:static;}.back-btn{border:0;border-radius:13px;background:var(--surface-alt);color:var(--navy-900);padding:9px 13px;font-weight:700;display:flex;gap:6px;align-items:center;box-shadow:4px 4px 8px rgba(118,143,171,.22),-3px -3px 7px #fff;}.back-btn:hover{transform:translateY(-1px);}.assessment-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;}.assessment-heading h1{margin:0;color:var(--navy-900);font-size:28px;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 28px;position:sticky;top:0;z-index:10;}
+  .brand-mark{border-radius:8px;background:var(--navy-900);box-shadow:none;}
+  .brand-name{color:var(--navy-900)!important;font-size:17px;}.topbar .brand-sub{display:block;font-size:10px;letter-spacing:1px;color:var(--ink-soft);}
+  .user-pill{background:var(--surface-alt);border:1px solid var(--border);box-shadow:none;border-radius:8px;}
+  .app-body{gap:24px;padding:28px 28px 48px;max-width:1340px;}.page-head{padding:8px 4px 12px;}.page-head h1{font-size:26px;letter-spacing:-.3px;color:var(--navy-900);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px;margin-bottom:18px;}.card-head{margin-bottom:18px;}
+  .card-icon{width:36px;height:36px;border-radius:8px;background:var(--blue-100);box-shadow:none;color:var(--blue-600);}
+  .field label{color:var(--ink);font-weight:600;}
+  .input-wrap input,.input-wrap select{border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:none;padding-top:11px;padding-bottom:11px;transition:border-color .15s,box-shadow .15s;}
+  .input-wrap input:focus,.input-wrap select:focus{border-color:var(--blue-600);background:#fff;box-shadow:0 0 0 3px rgba(26,93,171,0.1);}
+  .assess-btn{border-radius:8px;background:var(--navy-900);box-shadow:none;transition:background .15s,transform .1s;}.assess-btn:hover{background:var(--blue-600);transform:none;}.assess-btn:active{transform:scale(0.99);}
+  .results-sticky{top:24px;}
+  .score-card,.verdict-card,.result-panel{box-shadow:var(--shadow);border:1px solid var(--border);border-radius:var(--radius);}
+  .factor{box-shadow:none;border:1px solid var(--border);border-radius:8px;}
+  .fin-item,.fin-summary{box-shadow:none;border:1px solid var(--border);border-radius:8px;}
+  .risk-badge{box-shadow:none;}
+  .back-btn{border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--navy-900);padding:8px 14px;font-weight:600;font-size:13px;display:flex;gap:6px;align-items:center;box-shadow:none;transition:background .15s;}.back-btn:hover{background:var(--surface-alt);transform:none;}
+  #assessmentView{display:none;max-width:1100px;width:100%;margin:0 auto;}.assessment-mode .app-body{display:block;max-width:1200px;}.assessment-mode .page-head{display:none;}.assessment-mode #inputView{display:none;}.assessment-mode #assessmentView{display:block;}.assessment-mode .results-sticky{position:static;}
+  .assessment-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px;}.assessment-heading h1{margin:0;color:var(--navy-900);font-size:26px;font-weight:700;}
+  .loader-radar .ring{border-top-color:var(--blue-600);}
+  .loader-radar .ring:nth-child(2){border-top-color:var(--navy-800);}
+  .loader-radar .radar-core{background:var(--blue-100);box-shadow:0 0 16px rgba(26,93,171,0.1);}
+  .loader-step.active{background:var(--blue-100);border-color:rgba(26,93,171,0.2);box-shadow:none;}
+  .loader-step.active .step-icon{border-color:var(--blue-600);background:var(--blue-600);box-shadow:0 0 0 3px rgba(26,93,171,0.12);}
+  .loader-step{box-shadow:none;border-radius:8px;}
+  .loader-step.done .step-icon{border-color:var(--green);background:var(--green);}
+  .loader-progress{box-shadow:none;background:var(--surface-alt);border:1px solid var(--border);}
+  .loader-progress-bar{background:linear-gradient(90deg,var(--blue-600),var(--navy-900));}
   /* ---------- VIEWPORT-FIT APPLICATION WORKSPACE ---------- */
   body{overflow:hidden;}.topbar{display:none!important;}#appScreen{height:100vh;overflow:hidden;}.app-body{display:block;max-width:1420px;height:100vh;padding:26px 30px 22px;overflow:hidden;}.page-head{padding:0 4px 14px;display:flex;align-items:end;justify-content:space-between;}.page-head h1{font-size:28px;}.page-head p{padding-bottom:4px;}
-  #inputView{height:calc(100vh - 102px);}#assessForm{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto 1fr auto;gap:16px;align-items:stretch;}#assessForm>.card{margin:0;padding:17px 18px;overflow:hidden;}#assessForm>.card:first-child{grid-column:1/-1;display:grid;grid-template-columns:1.05fr 1.8fr;gap:18px;align-items:center;}#assessForm>.card:first-child .card-head{margin:0;}#assessForm>.card:first-child .card-head span{display:none;}#assessForm>.card:first-child>div[style*="margin-bottom"]{margin:0!important;}#assessForm>.card:first-child>div:last-child{padding:9px 12px!important;background:var(--surface-alt)!important;}#assessForm>.card:first-child table{display:none;}#assessForm>.card:first-child .input-wrap input,#assessForm>.card:first-child .input-wrap select{padding-top:10px;padding-bottom:10px;}
-  #assessForm>.card:nth-child(2),#assessForm>.card:nth-child(3),#assessForm>.card:nth-child(4){min-height:0;}#assessForm .card-head{margin-bottom:12px;}#assessForm .card-head span{display:none;}#assessForm .grid-2{gap:10px 12px;}#assessForm .field{margin-bottom:10px;}#assessForm .field label{font-size:11px;margin-bottom:4px;}#assessForm .input-wrap input,#assessForm .input-wrap select{font-size:13px;padding:9px 10px 9px 35px;min-height:38px;}#assessForm .input-wrap svg{left:10px;width:15px;height:15px;}#assessBtn{grid-column:1/-1;justify-self:center;width:min(420px,100%);padding:12px 16px;}.assessment-mode .app-body{height:100vh;padding-top:48px;}.assessment-mode #assessmentView{max-height:calc(100vh - 70px);overflow:hidden;}.assessment-mode #resultsCard{max-height:calc(100vh - 145px);overflow:auto;scrollbar-width:none;}.assessment-mode #resultsCard::-webkit-scrollbar{display:none;}
+  #inputView{height:calc(100vh - 102px);}#assessForm{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr auto;gap:16px;align-items:stretch;}#assessForm>.card{margin:0;padding:17px 18px;overflow:hidden;min-height:0;}#assessForm .card-head{margin-bottom:12px;}#assessForm .card-head span{display:none;}#assessForm .grid-2{gap:10px 12px;}#assessForm .field{margin-bottom:10px;}#assessForm .field label{font-size:11px;margin-bottom:4px;}#assessForm .input-wrap input,#assessForm .input-wrap select{font-size:13px;padding:9px 10px 9px 35px;min-height:38px;}#assessForm .input-wrap svg{left:10px;width:15px;height:15px;}#assessBtn{grid-column:1/-1;justify-self:center;width:min(420px,100%);padding:12px 16px;}.assessment-mode .app-body{height:100vh;padding-top:48px;}.assessment-mode #assessmentView{max-height:calc(100vh - 70px);overflow:hidden;}.assessment-mode #resultsCard{max-height:calc(100vh - 145px);overflow:auto;scrollbar-width:none;}.assessment-mode #resultsCard::-webkit-scrollbar{display:none;}
   @media(max-width:1050px){body,#appScreen{overflow:auto;}.app-body{height:auto;overflow:visible;}#inputView{height:auto;}#assessForm{height:auto;grid-template-columns:1fr 1fr;grid-template-rows:auto;}.assessment-mode .app-body{height:auto;}.assessment-mode #assessmentView{max-height:none;overflow:visible;}.assessment-mode #resultsCard{max-height:none;overflow:visible;}}
   @media(max-width:640px){.topbar{width:calc(100% - 24px);margin-top:12px}.app-body{padding:24px 12px 44px}.topbar .brand-sub{display:none}.user-pill span{display:none}.card{padding:18px}.page-head h1{font-size:25px}}
 
@@ -784,31 +885,52 @@
         </div>
 
         <div id="resultContent" style="display:none;">
-          <div class="gauge-wrap">
-            <svg id="gaugeSvg" viewBox="0 0 200 120" style="width:220px;">
-              <path d="M20,110 A80,80 0 0,1 68,32" fill="none" stroke="#1B8F5F" stroke-width="14" stroke-linecap="round"/>
-              <path d="M68,32 A80,80 0 0,1 132,32" fill="none" stroke="#B8790E" stroke-width="14" stroke-linecap="round"/>
-              <path d="M132,32 A80,80 0 0,1 180,110" fill="none" stroke="#C23B3B" stroke-width="14" stroke-linecap="round"/>
-              <line id="needle" x1="100" y1="110" x2="100" y2="40" stroke="#0B2545" stroke-width="4" stroke-linecap="round" style="transform-origin:100px 110px; transition: transform .8s cubic-bezier(.34,1.4,.64,1);"/>
-              <circle cx="100" cy="110" r="7" fill="#0B2545"/>
-            </svg>
-            <div class="gauge-score mono" id="scoreText">--</div>
-            <div class="gauge-label">Risk index &middot; 0&ndash;100</div>
-            <div class="risk-badge" id="riskBadge">
-              <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;"><path d="M4 12l6 6L20 6"/></svg>
-              <span id="riskBadgeText">Low Risk</span>
+          <div class="results-grid">
+            <!-- LEFT COLUMN: Score + Verdict -->
+            <div class="results-left">
+              <div class="score-card fade-in">
+                <div class="gauge-wrap">
+                  <svg id="gaugeSvg" viewBox="0 0 200 120" style="width:240px;">
+                    <path d="M20,110 A80,80 0 0,1 68,32" fill="none" stroke="#1B8F5F" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M68,32 A80,80 0 0,1 132,32" fill="none" stroke="#B8790E" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M132,32 A80,80 0 0,1 180,110" fill="none" stroke="#C23B3B" stroke-width="14" stroke-linecap="round"/>
+                    <line id="needle" x1="100" y1="110" x2="100" y2="40" stroke="#0B2545" stroke-width="4" stroke-linecap="round" style="transform-origin:100px 110px; transition: transform .8s cubic-bezier(.34,1.4,.64,1);"/>
+                    <circle cx="100" cy="110" r="7" fill="#0B2545"/>
+                  </svg>
+                  <div class="gauge-score mono" id="scoreText">--</div>
+                  <div class="gauge-label">Risk index &middot; 0&ndash;100</div>
+                  <div class="risk-badge" id="riskBadge">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;"><path d="M4 12l6 6L20 6"/></svg>
+                    <span id="riskBadgeText">Low Risk</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="verdict-card fade-in-delay-2" id="verdictCard">
+                <div class="verdict-title">Assessment Verdict</div>
+                <p class="reco-text" id="recoBox"></p>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Factors + Financial -->
+            <div class="results-right">
+              <div class="result-panel fade-in-delay-1">
+                <div class="panel-title">
+                  <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+                  Risk Factors
+                </div>
+                <div class="factor-list" id="factorList"></div>
+              </div>
+
+              <div class="result-panel fade-in-delay-2" id="loanDetailsSection" style="display:none;">
+                <div class="panel-title">
+                  <svg viewBox="0 0 24 24"><path d="M6 3h9"/><path d="M6 8h9"/><path d="M6 3s0 10 9 10"/><path d="M6 13h5"/><path d="M9 13v8"/></svg>
+                  Financial Analysis
+                </div>
+                <div class="fin-grid" id="loanDetailsGrid"></div>
+              </div>
             </div>
           </div>
-
-
-          <div class="factor-list" id="factorList"></div>
-
-          <div id="loanDetailsSection" style="display:none;margin-top:14px;padding:14px 15px;border:1px solid var(--border);border-radius:11px;background:var(--surface-alt);">
-            <div style="font-size:11px;font-weight:700;color:var(--ink-soft);letter-spacing:0.4px;text-transform:uppercase;margin-bottom:10px;">Financial Analysis</div>
-            <div id="loanDetailsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px;"></div>
-          </div>
-
-          <div class="reco-box" id="recoBox"></div>
         </div>
       </div>
     </div>
@@ -1010,9 +1132,6 @@
       if (sk) sk.style.display = 'none';
       if (rc) {
         rc.style.display = 'block';
-        rc.classList.remove('fade-in');
-        void rc.offsetWidth;
-        rc.classList.add('fade-in');
       }
 
 
@@ -1028,14 +1147,14 @@
                         : ld.affordabilityStatus === 'Strained'   ? 'var(--amber)'
                         : 'var(--red)';
           ldGrid.innerHTML = `
-            <div><span style="color:var(--ink-soft);font-size:11px;">Monthly Income</span><br><b>${fmt(ld.monthlyIncome)}</b></div>
-            <div><span style="color:var(--ink-soft);font-size:11px;">Est. Monthly EMI</span><br><b>${fmt(ld.estimatedEmi)}</b></div>
-            <div><span style="color:var(--ink-soft);font-size:11px;">Total Loan Obligation</span><br><b>${fmt(ld.totalLoanObligation)}</b></div>
-            <div><span style="color:var(--ink-soft);font-size:11px;">Max Eligible Loan</span><br><b>${fmt(ld.maxEligibleLoan)}</b></div>
-            <div style="grid-column:1/-1;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-size:11.5px;">
-              Affordability: <b style="color:${afColor}">${ld.affordabilityStatus}</b>
-              &nbsp;&middot;&nbsp; DTI: <b>${ld.dtiPercentage}%</b>
-              &nbsp;&middot;&nbsp; LTI: <b>${ld.ltiRatio}&times;</b>
+            <div class="fin-item"><div class="fin-label">Monthly Income</div><div class="fin-value">${fmt(ld.monthlyIncome)}</div></div>
+            <div class="fin-item"><div class="fin-label">Est. Monthly EMI</div><div class="fin-value">${fmt(ld.estimatedEmi)}</div></div>
+            <div class="fin-item"><div class="fin-label">Total Loan Obligation</div><div class="fin-value">${fmt(ld.totalLoanObligation)}</div></div>
+            <div class="fin-item"><div class="fin-label">Max Eligible Loan</div><div class="fin-value">${fmt(ld.maxEligibleLoan)}</div></div>
+            <div class="fin-summary">
+              <span class="fin-tag">Affordability: <b style="color:${afColor}">${ld.affordabilityStatus}</b></span>
+              <span class="fin-tag">DTI: <b>${ld.dtiPercentage}%</b></span>
+              <span class="fin-tag">LTI: <b>${ld.ltiRatio}&times;</b></span>
             </div>
           `;
         }
