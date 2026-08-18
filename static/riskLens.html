@@ -313,76 +313,183 @@
   @media(max-width:1050px){body,#appScreen{overflow:auto;}.app-body{height:auto;overflow:visible;}#inputView{height:auto;}#assessForm{height:auto;grid-template-columns:1fr 1fr;grid-template-rows:auto;}.assessment-mode .app-body{height:auto;}.assessment-mode #assessmentView{max-height:none;overflow:visible;}.assessment-mode #resultsCard{max-height:none;overflow:visible;}}
   @media(max-width:640px){.topbar{width:calc(100% - 24px);margin-top:12px}.app-body{padding:24px 12px 44px}.topbar .brand-sub{display:none}.user-pill span{display:none}.card{padding:18px}.page-head h1{font-size:25px}}
 
-  /* Skeleton Loading Styles */
-  .skeleton-loader {
+  /* ---------- LOADING ANIMATION ---------- */
+  .risk-loader {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 10px 0;
-  }
-  .skeleton-shimmer {
-    background: linear-gradient(90deg, var(--surface-alt) 25%, var(--border) 50%, var(--surface-alt) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer-anim 1.4s infinite ease-in-out;
-  }
-  @keyframes skeleton-shimmer-anim {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .skeleton-circle {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    margin: 0 auto 10px;
-  }
-  .skeleton-text {
-    height: 16px;
-    border-radius: 4px;
-  }
-  .skeleton-text.header {
-    height: 22px;
-    width: 60%;
-    margin: 0 auto;
-  }
-  .skeleton-text.sub {
-    height: 12px;
-    width: 40%;
-    margin: 8px auto 16px;
-  }
-  .skeleton-row {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-radius: 11px;
-    padding: 12px 14px;
+    padding: 32px 20px 24px;
+    gap: 0;
+  }
+
+  /* Pulsing radar / scanner ring */
+  .loader-radar {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin-bottom: 28px;
+  }
+  .loader-radar .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2.5px solid transparent;
+    border-top-color: var(--blue-600);
+    animation: radarSpin 1.1s linear infinite;
+  }
+  .loader-radar .ring:nth-child(2) {
+    inset: 14px;
+    border-top-color: var(--navy-800);
+    animation-duration: 1.6s;
+    animation-direction: reverse;
+  }
+  .loader-radar .ring:nth-child(3) {
+    inset: 28px;
+    border-top-color: var(--blue-600);
+    animation-duration: 2.2s;
+  }
+  .loader-radar .radar-core {
+    position: absolute;
+    inset: 40px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--blue-100), var(--surface));
+    box-shadow: inset 3px 3px 6px rgba(129,153,181,.2), inset -3px -3px 6px #fff,
+                0 0 24px rgba(75,131,197,.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .loader-radar .radar-core svg {
+    width: 26px;
+    height: 26px;
+    stroke: var(--blue-600);
+    fill: none;
+    stroke-width: 1.8;
+    animation: corePulse 1.8s ease-in-out infinite;
+  }
+  @keyframes radarSpin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes corePulse {
+    0%, 100% { opacity: .6; transform: scale(.92); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  /* Progress bar */
+  .loader-progress {
+    width: 100%;
+    max-width: 320px;
+    height: 6px;
+    background: var(--surface-alt);
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 2px 2px 4px rgba(129,153,181,.18), inset -2px -2px 4px #fff;
+    margin-bottom: 24px;
+  }
+  .loader-progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--blue-600), var(--navy-800));
+    transition: width .45s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Status text */
+  .loader-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--navy-800);
+    letter-spacing: 0.3px;
+    margin-bottom: 26px;
+    min-height: 18px;
+    text-align: center;
+  }
+  .loader-status .dot-pulse::after {
+    content: '';
+    animation: dotPulse 1.4s steps(4, end) infinite;
+  }
+  @keyframes dotPulse {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+
+  /* Step checklist */
+  .loader-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .loader-step {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 14px;
+    border-radius: 12px;
     background: var(--surface-alt);
     border: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    transition: all .35s ease;
+    box-shadow: inset 2px 2px 5px rgba(129,153,181,.1), inset -2px -2px 5px rgba(255,255,255,.7);
   }
-  .skeleton-row-left {
+  .loader-step.active {
+    color: var(--navy-900);
+    font-weight: 600;
+    background: var(--blue-100);
+    border-color: rgba(75,131,197,.25);
+    box-shadow: 4px 4px 10px rgba(109,137,170,.2), -3px -3px 8px rgba(255,255,255,.7);
+  }
+  .loader-step.done {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .loader-step .step-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
     display: flex;
-    gap: 10px;
     align-items: center;
-    width: 70%;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    transition: all .3s ease;
   }
-  .skeleton-icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+  .loader-step.active .step-icon {
+    border-color: var(--blue-600);
+    background: var(--blue-600);
+    box-shadow: 0 0 0 3px rgba(75,131,197,.2);
   }
-  .skeleton-label {
-    height: 14px;
-    width: 50%;
-    border-radius: 4px;
+  .loader-step.active .step-icon::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    animation: stepDotBlink .8s ease-in-out infinite alternate;
   }
-  .skeleton-value {
-    height: 14px;
-    width: 20%;
-    border-radius: 4px;
+  @keyframes stepDotBlink {
+    from { opacity: .4; transform: scale(.8); }
+    to   { opacity: 1; transform: scale(1.1); }
   }
-  .skeleton-box {
-    height: 90px;
-    border-radius: 11px;
-    width: 100%;
+  .loader-step.done .step-icon {
+    border-color: var(--green);
+    background: var(--green);
+  }
+  .loader-step.done .step-icon svg {
+    width: 12px;
+    height: 12px;
+    stroke: #fff;
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 </style>
 </head>
@@ -711,35 +818,36 @@
           <p>Fill in the applicant's details and click<br><b>Assess Risk</b> to generate a score.</p>
         </div>
 
-        <!-- SKELETON LOADER -->
-        <div id="skeletonLoader" class="skeleton-loader" style="display:none;">
-          <div class="skeleton-circle skeleton-shimmer"></div>
-          <div class="skeleton-text header skeleton-shimmer"></div>
-          <div class="skeleton-text sub skeleton-shimmer"></div>
-          
-          <div class="skeleton-row">
-            <div class="skeleton-row-left">
-              <div class="skeleton-icon skeleton-shimmer"></div>
-              <div class="skeleton-label skeleton-shimmer"></div>
+        <!-- LOADING ANIMATION -->
+        <div id="skeletonLoader" class="risk-loader" style="display:none;">
+          <div class="loader-radar">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="radar-core">
+              <svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
             </div>
-            <div class="skeleton-value skeleton-shimmer"></div>
           </div>
-          <div class="skeleton-row">
-            <div class="skeleton-row-left">
-              <div class="skeleton-icon skeleton-shimmer"></div>
-              <div class="skeleton-label skeleton-shimmer"></div>
+          <div class="loader-progress"><div class="loader-progress-bar" id="loaderProgressBar"></div></div>
+          <div class="loader-status" id="loaderStatus"><span class="dot-pulse">Initializing</span></div>
+          <div class="loader-steps">
+            <div class="loader-step" data-step="0">
+              <span class="step-icon"></span>
+              <span>Analyzing applicant profile</span>
             </div>
-            <div class="skeleton-value skeleton-shimmer"></div>
-          </div>
-          <div class="skeleton-row">
-            <div class="skeleton-row-left">
-              <div class="skeleton-icon skeleton-shimmer"></div>
-              <div class="skeleton-label skeleton-shimmer"></div>
+            <div class="loader-step" data-step="1">
+              <span class="step-icon"></span>
+              <span>Running ML classifier model</span>
             </div>
-            <div class="skeleton-value skeleton-shimmer"></div>
+            <div class="loader-step" data-step="2">
+              <span class="step-icon"></span>
+              <span>Computing risk score &amp; factors</span>
+            </div>
+            <div class="loader-step" data-step="3">
+              <span class="step-icon"></span>
+              <span>Generating assessment report</span>
+            </div>
           </div>
-          
-          <div class="skeleton-box skeleton-shimmer" style="margin-top: 14px;"></div>
         </div>
 
         <div id="resultContent" style="display:none;">
@@ -841,15 +949,55 @@
     const ldSection = document.getElementById('loanDetailsSection');
     const modelInfoRow = document.getElementById('modelInfoRow');
 
-    // Reset previous states and show skeleton loader
+    // Reset previous states and show loading animation
     if (es) es.style.display = 'none';
     if (rc) rc.style.display = 'none';
     if (ldSection) ldSection.style.display = 'none';
     if (modelInfoRow) modelInfoRow.style.display = 'none';
     if (sk) sk.style.display = 'flex';
 
-    // Switch view immediately to let the user see the loading progression
+    // Reset loader state
+    const progressBar = document.getElementById('loaderProgressBar');
+    const statusText = document.getElementById('loaderStatus');
+    const steps = sk.querySelectorAll('.loader-step');
+    if (progressBar) progressBar.style.width = '0%';
+    steps.forEach(s => { s.classList.remove('active', 'done'); s.querySelector('.step-icon').innerHTML = ''; });
+
+    // Switch view immediately to let the user see the loading animation
     showAssessmentView();
+
+    // Animate loader phases (runs in parallel with the fetch)
+    const LOADER_STEPS = [
+      { label: 'Analyzing applicant profile', progress: 20 },
+      { label: 'Running ML classifier model', progress: 50 },
+      { label: 'Computing risk score & factors', progress: 78 },
+      { label: 'Generating assessment report', progress: 95 },
+    ];
+    let loaderDone = false;
+    const loaderPromise = (async () => {
+      for (let i = 0; i < LOADER_STEPS.length; i++) {
+        // Mark previous step as done
+        if (i > 0) {
+          steps[i - 1].classList.remove('active');
+          steps[i - 1].classList.add('done');
+          steps[i - 1].querySelector('.step-icon').innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>';
+        }
+        // Activate current step
+        steps[i].classList.add('active');
+        if (progressBar) progressBar.style.width = LOADER_STEPS[i].progress + '%';
+        if (statusText) statusText.innerHTML = '<span class="dot-pulse">' + LOADER_STEPS[i].label + '</span>';
+        await new Promise(r => setTimeout(r, 700 + Math.random() * 350));
+      }
+      // Mark last step done
+      const last = steps[LOADER_STEPS.length - 1];
+      last.classList.remove('active');
+      last.classList.add('done');
+      last.querySelector('.step-icon').innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>';
+      if (progressBar) progressBar.style.width = '100%';
+      if (statusText) statusText.innerHTML = '<span class="dot-pulse">Finalizing</span>';
+      await new Promise(r => setTimeout(r, 400));
+      loaderDone = true;
+    })();
 
     try {
       const payload = {
@@ -924,7 +1072,8 @@
         result.recommendation ||
         'Assessment completed successfully.';
 
-      // Hide skeleton loader and show actual results
+      // Wait for loader animation to finish before showing results
+      if (!loaderDone) await loaderPromise;
       if (sk) sk.style.display = 'none';
       if (rc) {
         rc.style.display = 'block';
