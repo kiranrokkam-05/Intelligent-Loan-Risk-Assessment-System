@@ -142,5 +142,35 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertIn("error", response.get_json())
 
+    def test_invalid_payload_is_rejected(self):
+        """Verify malformed and out-of-range requests return client errors."""
+        empty_response = self.client.post("/api/assess", json={})
+        self.assertEqual(empty_response.status_code, 400)
+
+        range_response = self.client.post("/api/assess", json={"age": 17})
+        self.assertEqual(range_response.status_code, 400)
+        self.assertIn("age", range_response.get_json()["error"])
+
+        model_response = self.client.post("/api/assess", json={"modelChoice": "missing"})
+        self.assertEqual(model_response.status_code, 400)
+
+    def test_all_models_can_predict(self):
+        """Verify every persisted model returns a valid probability."""
+        payload = {
+            "age": 40,
+            "income": 900000,
+            "loanAmt": 300000,
+            "credit": 720,
+            "modelChoice": "lr",
+        }
+        for model_name in ("lr", "rf", "xgboost"):
+            payload["modelChoice"] = model_name
+            response = self.client.post("/api/assess", json=payload)
+            self.assertEqual(response.status_code, 200)
+            result = response.get_json()
+            self.assertIn("probability", result)
+            self.assertGreaterEqual(result["probability"], 0)
+            self.assertLessEqual(result["probability"], 1)
+
 if __name__ == "__main__":
     unittest.main()
