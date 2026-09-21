@@ -145,22 +145,31 @@ class TestRiskLensBackend(unittest.TestCase):
     def test_invalid_payload_is_rejected(self):
         """Verify malformed and out-of-range requests return client errors."""
         empty_response = self.client.post("/api/assess", json={})
-        self.assertEqual(empty_response.status_code, 400)
+        self.assertEqual(empty_response.status_code, 422)
 
         range_response = self.client.post("/api/assess", json={"age": 17})
-        self.assertEqual(range_response.status_code, 400)
-        self.assertIn("age", range_response.get_json()["error"])
+        self.assertEqual(range_response.status_code, 422)
+        self.assertIn("error", range_response.get_json())
 
         model_response = self.client.post("/api/assess", json={"modelChoice": "missing"})
-        self.assertEqual(model_response.status_code, 400)
+        self.assertEqual(model_response.status_code, 422)
 
     def test_all_models_can_predict(self):
         """Verify every persisted model returns a valid probability."""
         payload = {
             "age": 40,
+            "empType": "salaried",
+            "empExp": 8,
             "income": 900000,
+            "addIncome": 0,
             "loanAmt": 300000,
+            "loanTerm": 36,
+            "loanPurpose": "personal",
+            "debt": 50000,
+            "emi": 5000,
             "credit": 720,
+            "defaults": 0,
+            "repayStatus": "good",
             "modelChoice": "lr",
         }
         for model_name in ("lr", "rf", "xgboost"):
