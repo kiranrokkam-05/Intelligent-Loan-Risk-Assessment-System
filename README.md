@@ -35,6 +35,14 @@ Open `http://localhost:8000/`.
 
 Automatic training at application startup is disabled by default. For local development only, set `ALLOW_MODEL_TRAINING=true` if `models/model.joblib` is absent.
 
+For the complete Windows workflow, run `run_project.bat` from this project directory. It selects the existing `.venv` (or `venv`), verifies dependencies and required files, runs the authoritative training pipeline, evaluates every persisted model on the deterministic held-out split, prints the metrics in the terminal, and starts the Flask backend. The browser UI remains unchanged and is available at `http://localhost:8000/`.
+
+The evaluation command used by the batch workflow can also be run independently:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.evaluate_model
+```
+
 ## Tests
 
 ```powershell
