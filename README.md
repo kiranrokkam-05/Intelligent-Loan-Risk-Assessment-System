@@ -56,7 +56,7 @@ validation independence, monitoring/drift limits, incident response, human
 override/appeal process, and any jurisdiction-specific obligations before
 production use.
 
-Before starting the server, copy `.env.example` to `.env` (or export the variables in the process environment). Set `AUTH_PASSWORD_HASH` to a Werkzeug password hash and set a long random `SESSION_SECRET`; production startup fails fast if either value is missing. The browser login uses an HttpOnly, SameSite session cookie and CSRF token. Static frontend files remain public, while `/api/models` and `/api/assess` require authentication. `SESSION_COOKIE_SECURE=true` is required when serving over HTTPS (and is the default in `ENVIRONMENT=production`).
+The current application intentionally has no login or signup flow. The assessment UI and API are directly available after the server starts. Keep the service behind an approved network boundary, reverse proxy, WAF, or API gateway if it is exposed beyond a trusted environment.
 
 For the complete Windows workflow, run `run_project.bat` from this project directory. It selects the existing `.venv` (or `venv`), verifies dependencies and required files, trains only in `ENVIRONMENT=development`, runs tests, held-out evaluation, artifact/governance checks, and starts the Flask backend. Set `ENVIRONMENT=production` only with approved artifacts and all required secrets/configuration; startup then fails closed rather than training. The browser UI remains unchanged and is available at `http://localhost:8000/`.
 
@@ -79,7 +79,6 @@ The tests cover model loading, all API endpoints, model selection, valid/invalid
 
 - `GET /` and `GET /riskLens.html`: serve the authoritative frontend.
 - `GET /api/health`: report service health and loaded models.
-- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`: manage the server-side authenticated session.
 - `GET /api/models`: report persisted evaluation metrics and SMOTE metadata.
 - `POST /api/assess`: validate an application, select a model, predict default probability, and return score/category, risk factors, recommendations, and financial calculations.
 

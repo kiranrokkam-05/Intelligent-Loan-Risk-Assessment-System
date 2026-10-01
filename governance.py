@@ -69,13 +69,6 @@ def validate_production_config(env: dict[str, str] | None = None) -> list[str]:
     if values.get("ENVIRONMENT", "development").strip().lower() != "production":
         return []
     errors = []
-    for key in ("SESSION_SECRET", "AUTH_PASSWORD_HASH"):
-        if not values.get(key, "").strip():
-            errors.append(f"{key} must be configured")
-    if len(values.get("SESSION_SECRET", "")) < 32:
-        errors.append("SESSION_SECRET must contain at least 32 characters")
-    if values.get("SESSION_COOKIE_SECURE", "true").lower() not in {"1", "true", "yes"}:
-        errors.append("SESSION_COOKIE_SECURE must be true in production")
     if values.get("ALLOW_MODEL_TRAINING", "false").lower() in {"1", "true", "yes", "t"}:
         errors.append("ALLOW_MODEL_TRAINING must be false in production")
     if not values.get("ALLOWED_ORIGINS", "").strip():
@@ -89,4 +82,3 @@ def run_governance_checks() -> dict[str, Any]:
     if not REPORT_PATH.is_file():
         errors.append("model-risk evaluation report is missing")
     return {"ok": not errors, "errors": errors, "artifact": integrity}
-

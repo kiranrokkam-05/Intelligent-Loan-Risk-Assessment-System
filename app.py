@@ -10,18 +10,15 @@ Open: http://localhost:8000/
 import logging
 import json
 import os
-import secrets
 import time
 import uuid
 from collections import defaultdict, deque
 from pathlib import Path
-from functools import wraps
 from urllib.parse import urlparse
 import joblib
 import pandas as pd
 import numpy as np
-from flask import Flask, request, jsonify, send_from_directory, session
-from werkzeug.security import check_password_hash
+from flask import Flask, request, jsonify, send_from_directory
 from governance import (
     validate_production_config,
     verify_artifact_integrity,
@@ -86,33 +83,8 @@ if CONFIG_ERRORS:
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 app.config.update(
-    SECRET_KEY=os.environ.get("SESSION_SECRET") or secrets.token_urlsafe(32),
     MAX_CONTENT_LENGTH=MAX_REQUEST_BYTES,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE=os.environ.get("SESSION_COOKIE_SAMESITE", "Lax"),
-    SESSION_COOKIE_SECURE=os.environ.get(
-        "SESSION_COOKIE_SECURE", "true" if ENVIRONMENT == "production" else "false"
-    ).lower() in {"1", "true", "yes"},
 )
-AUTH_USERNAME = os.environ.get("AUTH_USERNAME", "admin@risklens.local").strip().lower()
-AUTH_PASSWORD_HASH = os.environ.get("AUTH_PASSWORD_HASH", "").strip()
-
-
-def requires_auth(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if request.method == "OPTIONS":
-            return view(*args, **kwargs)
-        if not session.get("authenticated"):
-            return api_error("Authentication required", 401)
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-            csrf_token = request.headers.get("X-CSRF-Token", "")
-            if not secrets.compare_digest(
-                csrf_token, str(session.get("csrf_token", ""))
-            ):
-                return api_error("CSRF validation failed", 403)
-        return view(*args, **kwargs)
-    return wrapped
 
 
 def load_or_train_models():
@@ -279,56 +251,9 @@ def health_check():
     })
 
 
-@app.route("/api/auth/login", methods=["POST"])
-def login():
-    payload = request.get_json(silent=True)
-    if not isinstance(payload, dict):
-        return api_error("JSON object payload required", 400)
-    username = str(payload.get("email") or payload.get("username") or "").strip().lower()
-    password = payload.get("password")
-    if not AUTH_PASSWORD_HASH:
-        logger.error("AUTH_PASSWORD_HASH is not configured")
-        return api_error("Authentication is not configured", 503)
-    if not isinstance(password, str) or not username or username != AUTH_USERNAME:
-        return api_error("Invalid credentials", 401)
-    try:
-        valid = check_password_hash(AUTH_PASSWORD_HASH, password)
-    except (ValueError, TypeError):
-        logger.error("AUTH_PASSWORD_HASH is invalid")
-        return api_error("Authentication is not configured", 503)
-    if not valid:
-        return api_error("Invalid credentials", 401)
-    session.clear()
-    session["authenticated"] = True
-    session["username"] = username
-    session["csrf_token"] = secrets.token_urlsafe(32)
-    return jsonify({
-        "authenticated": True,
-        "username": username,
-        "csrfToken": session["csrf_token"],
-    })
-
-
-@app.route("/api/auth/logout", methods=["POST"])
-@requires_auth
-def logout():
-    session.clear()
-    return jsonify({"authenticated": False})
-
-
-@app.route("/api/auth/session", methods=["GET"])
-def auth_session():
-    return jsonify({
-        "authenticated": bool(session.get("authenticated")),
-        "username": session.get("username"),
-        "csrfToken": session.get("csrf_token"),
-    })
-
-
 # ============ METRICS API ENDPOINT ============
 
 @app.route("/api/models", methods=["GET"])
-@requires_auth
 def get_model_metrics():
     return jsonify({
         "smoteInfo": smote_info,
@@ -341,7 +266,6 @@ def get_model_metrics():
 # ============ ML ASSESSMENT ENDPOINT ============
 
 @app.route("/api/assess", methods=["POST", "OPTIONS"])
-@requires_auth
 def assess_risk():
     if request.method == "OPTIONS":
         return ("", 204)

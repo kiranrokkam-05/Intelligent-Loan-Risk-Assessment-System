@@ -29,6 +29,6 @@ Validate the response before display. The bundled UI is the reference consumer i
 ## Deployment checks
 
 1. Serve the UI from the same domain where possible; otherwise set exact trusted origins in `ALLOWED_ORIGINS`.
-2. Keep input validation, authentication, logging, rate limiting, and privacy controls at the API layer.
+2. Keep input validation, network access controls, logging, rate limiting, and privacy controls at the API layer. This application does not provide user login or signup.
 3. Never expose model artifacts, credentials, or training data to clients.
 4. Test valid low-, medium-, and high-risk profiles plus invalid input, rate limits, and service failures.
