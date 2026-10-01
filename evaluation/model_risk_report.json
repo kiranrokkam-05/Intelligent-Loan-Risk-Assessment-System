@@ -1,0 +1,132 @@
+{
+  "report_version": "1.0",
+  "evaluation": {
+    "split": "stratified hold-out",
+    "test_size": 0.2,
+    "random_state": 42,
+    "samples": 200,
+    "labels_available": true
+  },
+  "fairness": {
+    "status": "unavailable",
+    "reason": "No protected-attribute columns were present in the evaluation dataset.",
+    "protected_attributes": []
+  },
+  "models": {
+    "lr": {
+      "name": "Logistic Regression",
+      "accuracy": 0.955,
+      "precision": 1.0,
+      "recall": 0.9210526315789473,
+      "f1": 0.958904109589041,
+      "roc_auc": 0.9942880456956344,
+      "brier_score": 0.03571170193003802,
+      "calibration": {
+        "bins": 10,
+        "mean_predicted": [
+          0.016468224675874683,
+          0.14255793877908085,
+          0.23899487099308414,
+          0.3357655680005425,
+          0.42609156284310185,
+          0.5466584346522503,
+          0.6442809932015566,
+          0.7511383509815548,
+          0.8570775686915674,
+          0.9865445446272066
+        ],
+        "fraction_positive": [
+          0.014084507042253521,
+          0.2222222222222222,
+          0.0,
+          0.4,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "decision_threshold": 0.5,
+      "threshold_note": "0.5 is the classifier default; threshold selection requires documented human-approved costs."
+    },
+    "rf": {
+      "name": "Random Forest",
+      "accuracy": 0.955,
+      "precision": 0.972972972972973,
+      "recall": 0.9473684210526315,
+      "f1": 0.96,
+      "roc_auc": 0.9931660546715626,
+      "brier_score": 0.040798696222735555,
+      "calibration": {
+        "bins": 10,
+        "mean_predicted": [
+          0.04340136863917044,
+          0.13661432334094026,
+          0.24488613659472147,
+          0.3505998569054119,
+          0.45230952540685665,
+          0.5391493392164659,
+          0.6544156033625452,
+          0.7561229114149172,
+          0.8685679785245479,
+          0.9688341929748551
+        ],
+        "fraction_positive": [
+          0.0,
+          0.0,
+          0.3333333333333333,
+          0.0,
+          0.6,
+          0.75,
+          0.7142857142857143,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "decision_threshold": 0.5,
+      "threshold_note": "0.5 is the classifier default; threshold selection requires documented human-approved costs."
+    },
+    "xgboost": {
+      "name": "XGBoost",
+      "accuracy": 0.96,
+      "precision": 0.9818181818181818,
+      "recall": 0.9473684210526315,
+      "f1": 0.9642857142857143,
+      "roc_auc": 0.9971440228478172,
+      "brier_score": 0.02376028150320053,
+      "calibration": {
+        "bins": 10,
+        "mean_predicted": [
+          0.012115257645123884,
+          0.14121868354933603,
+          0.2705019563436508,
+          0.37374356389045715,
+          0.42548131942749023,
+          0.5814343690872192,
+          0.6644724011421204,
+          0.751389890909195,
+          0.8555519580841064,
+          0.9895734722071355
+        ],
+        "fraction_positive": [
+          0.0,
+          0.14285714285714285,
+          0.5,
+          0.6666666666666666,
+          1.0,
+          1.0,
+          0.5,
+          0.75,
+          1.0,
+          1.0
+        ]
+      },
+      "decision_threshold": 0.5,
+      "threshold_note": "0.5 is the classifier default; threshold selection requires documented human-approved costs."
+    }
+  },
+  "governance_note": "This report is evidence for human review, not a legal or regulatory compliance claim."
+}

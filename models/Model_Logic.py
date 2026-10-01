@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sklearn.model_selection import train_test_split
@@ -13,6 +14,10 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, f1_score, precision_score, recall_score
+
+if str(Path(__file__).resolve().parents[1]) not in os.sys.path:
+    os.sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from governance import write_artifact_metadata
 
 
 # ============================================================
@@ -180,15 +185,24 @@ def train_and_evaluate():
     }
     
     model_output_path = base_dir / "model.joblib"
-    joblib.dump({
+    artifact_data = {
         "pipelines": pipelines,
         "metrics": metrics_summary,
         "smote_info": smote_info,
         "best_key": best_key,
+        "model_version": os.environ.get("MODEL_VERSION", "1.0.0"),
+        "training_timestamp": datetime.now(timezone.utc).isoformat(),
+        "training_config": {"random_state": 42, "test_size": 0.2, "threshold": 0.5},
         # backward compatibility fallback
         "pipeline": pipelines[best_key],
         "model_name": metrics_summary[best_key]["name"]
-    }, model_output_path)
+    }
+    joblib.dump(artifact_data, model_output_path)
+    write_artifact_metadata(model_output_path, {
+        "model_version": artifact_data["model_version"],
+        "best_key": best_key,
+        "training_config": artifact_data["training_config"],
+    })
     
     print(f"\nTrained models and SMOTE metadata saved to: {model_output_path}")
     return pipelines, metrics_summary, smote_info

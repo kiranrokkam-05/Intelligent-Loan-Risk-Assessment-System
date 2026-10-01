@@ -4,6 +4,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 set "PROJECT_DIR=%~dp0"
 if not defined PORT set "PORT=8000"
+if not defined ENVIRONMENT set "ENVIRONMENT=development"
 
 echo ============================================================
 echo Starting RiskLens ML Project
@@ -64,16 +65,30 @@ if not exist "%PROJECT_DIR%static\riskLens.html" (
     exit /b 1
 )
 
-echo.
-echo Running the existing training pipeline...
-"%PYTHON%" "%PROJECT_DIR%models\Model_Logic.py"
-if errorlevel 1 (
-    echo ERROR: ML training pipeline failed.
-    pause
-    exit /b 1
+if /i "%ENVIRONMENT%"=="development" (
+    echo.
+    echo Running the existing training pipeline for local development...
+    "%PYTHON%" "%PROJECT_DIR%models\Model_Logic.py"
+    if errorlevel 1 (
+        echo ERROR: ML training pipeline failed.
+        pause
+        exit /b 1
+    )
+) else (
+    echo.
+    echo Production mode: training is disabled; using the approved artifact.
 )
 if not exist "%PROJECT_DIR%models\model.joblib" (
     echo ERROR: Training completed without creating models\model.joblib
+    pause
+    exit /b 1
+)
+
+echo.
+echo Running automated tests...
+"%PYTHON%" -m unittest -v test_system.py
+if errorlevel 1 (
+    echo ERROR: Automated tests failed.
     pause
     exit /b 1
 )
@@ -83,6 +98,15 @@ echo Running held-out model evaluation...
 "%PYTHON%" -m evaluation.evaluate_model
 if errorlevel 1 (
     echo ERROR: Model evaluation failed.
+    pause
+    exit /b 1
+)
+
+echo.
+echo Running model-risk and deployment governance checks...
+"%PYTHON%" "%PROJECT_DIR%governance_checks.py"
+if errorlevel 1 (
+    echo ERROR: Governance checks failed; refusing to start the backend.
     pause
     exit /b 1
 )

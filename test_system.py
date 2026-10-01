@@ -11,20 +11,39 @@ Tests all 5 key checklist features:
 import sys
 import unittest
 import json
+import os
 from pathlib import Path
+from werkzeug.security import generate_password_hash
 
 # Ensure root directory is on Python path
 project_dir = Path(__file__).parent
 if str(project_dir) not in sys.path:
     sys.path.insert(0, str(project_dir))
 
+os.environ.setdefault("AUTH_USERNAME", "test@example.com")
+os.environ.setdefault("AUTH_PASSWORD_HASH", generate_password_hash("test-password"))
+os.environ.setdefault("SESSION_SECRET", "test-session-secret")
+
 from app import app, pipelines, metrics, smote_info
+from governance import verify_artifact_integrity, validate_production_config
 
 class TestRiskLensBackend(unittest.TestCase):
     
     def setUp(self):
         self.client = app.test_client()
         self.client.testing = True
+        login = self.client.post("/api/auth/login", json={
+            "email": "test@example.com", "password": "test-password"
+        })
+        self.client.environ_base["HTTP_X_CSRF_TOKEN"] = login.get_json()["csrfToken"]
+
+    def test_authentication_required(self):
+        unauthenticated = app.test_client().get("/api/models")
+        self.assertEqual(unauthenticated.status_code, 401)
+        login = app.test_client().post("/api/auth/login", json={
+            "email": "test@example.com", "password": "wrong"
+        })
+        self.assertEqual(login.status_code, 401)
 
     def test_health_check_endpoint(self):
         """Verify Production Readiness Health Check endpoint."""
@@ -36,6 +55,25 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertIn("rf", data.get("modelsLoaded", []))
         self.assertIn("lr", data.get("modelsLoaded", []))
         print("OK: Production Health Check Endpoint Verified")
+
+    def test_request_id_and_model_metadata_are_non_sensitive(self):
+        response = self.client.get("/api/health")
+        self.assertTrue(response.headers.get("X-Request-ID"))
+        data = response.get_json()
+        self.assertTrue(data.get("modelVersion"))
+        self.assertRegex(data.get("artifactSha256", ""), r"^[0-9a-f]{64}$")
+
+    def test_artifact_integrity_and_production_config_fail_closed(self):
+        self.assertRegex(verify_artifact_integrity()["sha256"], r"^[0-9a-f]{64}$")
+        errors = validate_production_config({
+            "ENVIRONMENT": "production",
+            "SESSION_SECRET": "",
+            "AUTH_PASSWORD_HASH": "",
+            "SESSION_COOKIE_SECURE": "false",
+            "ALLOW_MODEL_TRAINING": "true",
+            "ALLOWED_ORIGINS": "",
+        })
+        self.assertGreaterEqual(len(errors), 5)
 
     def test_model_metrics_endpoint(self):
         """Verify Model Metrics validation endpoint."""

@@ -1,263 +1,31 @@
-import os
-from pathlib import Path
+"""Lazy random-forest auxiliary model; importing this module performs no training."""
+from functools import lru_cache
 import pandas as pd
-
 from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    confusion_matrix
-)
+from sklearn.metrics import accuracy_score
+from .shared_preprocessing import build_preprocessor, load_dataset
 
 
-# ============================================================
-# 1. LOAD RAW DATASET
-# ============================================================
-
-base_dir = Path(__file__).parent.parent
-dataset_path = base_dir / "preprocessing" / "loan_dataset.csv"
-if not dataset_path.exists():
-    dataset_path = base_dir / "loan_dataset.csv"
-
-df = pd.read_csv(dataset_path)
-
-
-# ============================================================
-# 2. REMOVE APPLICATION ID
-# ============================================================
-
-df = df.drop("application_id", axis=1)
-
-
-# ============================================================
-# 3. SEPARATE INPUT AND TARGET
-# ============================================================
-
-X = df.drop("defaulted_within_12_months", axis=1)
-
-y = df["defaulted_within_12_months"]
-
-
-# ============================================================
-# 4. DEFINE COLUMNS
-# ============================================================
-
-categorical_columns = [
-    "emp_type",
-    "loan_purpose",
-    "repayment_status"
-]
-
-numerical_columns = [
-    "age",
-    "emp_exp_years",
-    "annual_income",
-    "additional_income",
-    "loan_amount",
-    "loan_term_months",
-    "existing_debt",
-    "monthly_emi",
-    "credit_score",
-    "previous_defaults"
-]
-
-
-# ============================================================
-# 5. PREPROCESSING
-# ============================================================
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        (
-            "num",
-            StandardScaler(),
-            numerical_columns
-        ),
-        (
-            "cat",
-            OneHotEncoder(
-                handle_unknown="ignore",
-                drop="first"
-            ),
-            categorical_columns
-        )
-    ]
-)
-
-
-# ============================================================
-# 6. RANDOM FOREST MODEL
-# ============================================================
-
-rf = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=None,
-    random_state=42,
-    class_weight="balanced"
-)
-
-
-# ============================================================
-# 7. CREATE PIPELINE
-# ============================================================
-
-model = Pipeline(
-    steps=[
-        ("preprocessing", preprocessor),
-        ("random_forest", rf)
-    ]
-)
-
-
-# ============================================================
-# 8. TRAIN / TEST SPLIT
-# ============================================================
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
-)
-
-
-# ============================================================
-# 9. TRAIN MODEL
-# ============================================================
-
-model.fit(
-    X_train,
-    y_train
-)
-
-
-# ============================================================
-# 10. TEST MODEL
-# ============================================================
-
-y_pred = model.predict(
-    X_test
-)
-
-
-# ============================================================
-# 11. CALCULATE MODEL PERFORMANCE
-# ============================================================
-
-accuracy = accuracy_score(
-    y_test,
-    y_pred
-)
-
-
-# ============================================================
-# 12. PRINT MODEL PERFORMANCE
-# ============================================================
-
-print("====================================")
-print("       RANDOM FOREST RESULTS")
-print("====================================")
-
-print("\nAccuracy:")
-print(accuracy)
-
-print("\nClassification Report:")
-print(
-    classification_report(
-        y_test,
-        y_pred
+@lru_cache(maxsize=1)
+def _trained_model():
+    x, y = load_dataset()
+    x_train, x_test, y_train, y_test = train_test_split(
+        x, y, test_size=0.2, random_state=42, stratify=y
     )
-)
-
-print("\nConfusion Matrix:")
-print(
-    confusion_matrix(
-        y_test,
-        y_pred
-    )
-)
+    model = Pipeline([("preprocessing", build_preprocessor()),
+                      ("random_forest", RandomForestClassifier(
+                          n_estimators=200, random_state=42, class_weight="balanced"))])
+    model.fit(x_train, y_train)
+    return model, float(accuracy_score(y_test, model.predict(x_test)))
 
 
-# ============================================================
-# 13. RANDOM FOREST PREDICTION FUNCTION
-# ============================================================
-
-def predict_random_forest(
-    age,
-    emp_type,
-    emp_exp_years,
-    annual_income,
-    additional_income,
-    loan_amount,
-    loan_term_months,
-    loan_purpose,
-    existing_debt,
-    monthly_emi,
-    credit_score,
-    previous_defaults,
-    repayment_status
-):
-
-    # ========================================================
-    # CREATE RAW APPLICANT DATAFRAME
-    # ========================================================
-
-    new_applicant = pd.DataFrame([{
-        "age": age,
-        "emp_type": emp_type.lower(),
-        "emp_exp_years": emp_exp_years,
-        "annual_income": annual_income,
-        "additional_income": additional_income,
-        "loan_amount": loan_amount,
-        "loan_term_months": loan_term_months,
-        "loan_purpose": loan_purpose.lower(),
-        "existing_debt": existing_debt,
-        "monthly_emi": monthly_emi,
-        "credit_score": credit_score,
-        "previous_defaults": previous_defaults,
-        "repayment_status": repayment_status.lower()
-    }])
-
-
-    # ========================================================
-    # MAKE PREDICTION
-    # ========================================================
-
-    prediction = model.predict(
-        new_applicant
-    )[0]
-
-
-    # ========================================================
-    # GET PREDICTION PROBABILITY
-    # ========================================================
-
-    probability = model.predict_proba(
-        new_applicant
-    )[0]
-
-
-    # ========================================================
-    # EXTRACT PROBABILITIES
-    # ========================================================
-
-    not_risk_probability = probability[0]
-
-    risk_probability = probability[1]
-
-
-    # ========================================================
-    # RETURN VALUES
-    # ========================================================
-
-    return (
-        prediction,
-        risk_probability,
-        not_risk_probability,
-        accuracy
-    )
+def predict_random_forest(age, emp_type, emp_exp_years, annual_income,
+                          additional_income, loan_amount, loan_term_months,
+                          loan_purpose, existing_debt, monthly_emi, credit_score,
+                          previous_defaults, repayment_status):
+    model, accuracy = _trained_model()
+    applicant = pd.DataFrame([locals()])
+    probabilities = model.predict_proba(applicant)[0]
+    return model.predict(applicant)[0], probabilities[1], probabilities[0], accuracy

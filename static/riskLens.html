@@ -378,8 +378,6 @@
   /* ---------- BANKING THEME ---------- */
   :root{--bg:#F0F2F5;--surface:#FFFFFF;--surface-alt:#F7F8FA;--navy-900:#0C1F3F;--navy-800:#1A3260;--blue-600:#1A5DAB;--blue-100:#E8F0FA;--ink:#1A2332;--ink-soft:#5F6B7A;--border:#E2E6EC;--green:#0D7A4F;--green-bg:#E6F4ED;--amber:#9A6B0A;--amber-bg:#FDF3E0;--red:#C0392B;--red-bg:#FDECEA;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04);}
   body{background:var(--bg);}
-  #loginScreen{display:none!important;}
-  #appScreen{display:flex;min-height:100vh;flex-direction:column;}
   .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 28px;position:sticky;top:0;z-index:10;}
   .brand-mark{border-radius:8px;background:var(--navy-900);box-shadow:none;}
   .brand-name{color:var(--navy-900)!important;font-size:17px;}.topbar .brand-sub{display:block;font-size:10px;letter-spacing:1px;color:var(--ink-soft);}
@@ -631,14 +629,14 @@
           <label for="email">Work email</label>
           <div class="input-wrap">
             <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>
-            <input id="email" type="email" placeholder="you@bank.com" value="admin@aus.in" required>
+            <input id="email" type="email" placeholder="you@bank.com" autocomplete="username" required>
           </div>
         </div>
         <div class="field">
           <label for="password">Password</label>
           <div class="input-wrap">
             <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <input id="password" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" value="admin123" required>
+            <input id="password" type="password" placeholder="Your password" autocomplete="current-password" required>
           </div>
         </div>
         <button type="submit" class="btn-primary" id="loginBtn">
@@ -650,7 +648,7 @@
 
       <div class="demo-hint">
         <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg>
-        <span>Demo build &mdash; credentials are pre-filled. Click <b>Sign in</b> to continue to the assessment console.</span>
+        <span>Use the credentials configured by your RiskLens administrator to open the assessment console.</span>
       </div>
     </div>
     </div>
@@ -938,6 +936,64 @@
 </div>
 
 <script>
+  const loginScreen = document.getElementById('loginScreen');
+  const appScreen = document.getElementById('appScreen');
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  let csrfToken = '';
+
+  function showConsole(authenticated) {
+    loginScreen.style.display = authenticated ? 'none' : 'flex';
+    appScreen.style.display = authenticated ? 'flex' : 'none';
+  }
+
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    loginError.style.display = 'none';
+    loginBtn.disabled = true;
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Unable to sign in');
+      csrfToken = result.csrfToken || '';
+      showConsole(true);
+    } catch (error) {
+      loginError.textContent = error.message;
+      loginError.style.display = 'block';
+    } finally {
+      loginBtn.disabled = false;
+    }
+  });
+
+  fetch('/api/auth/session')
+    .then(response => response.json())
+    .then(result => {
+      csrfToken = result.csrfToken || '';
+      showConsole(Boolean(result.authenticated));
+    })
+    .catch(() => showConsole(false));
+
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {'X-CSRF-Token': csrfToken}
+      });
+    } finally {
+      csrfToken = '';
+      showConsole(false);
+    }
+  });
+
   const assessForm = document.getElementById('assessForm');
   const needle = document.getElementById('needle');
   const scoreText = document.getElementById('scoreText');
@@ -945,7 +1001,6 @@
   const riskBadgeText = document.getElementById('riskBadgeText');
   const factorList = document.getElementById('factorList');
   const recoBox = document.getElementById('recoBox');
-  const appScreen = document.getElementById('appScreen');
   const backToInputs = document.getElementById('backToInputs');
 
   function showAssessmentView() {
@@ -1078,7 +1133,8 @@
       const response = await fetch('/api/assess', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         body: JSON.stringify(payload)
       });

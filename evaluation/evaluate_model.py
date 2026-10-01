@@ -13,13 +13,16 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
+    brier_score_loss,
 )
+from sklearn.calibration import calibration_curve
 from sklearn.model_selection import train_test_split
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DATASET_PATH = PROJECT_DIR / "preprocessing" / "loan_dataset.csv"
 MODEL_PATH = PROJECT_DIR / "models" / "model.joblib"
+REPORT_PATH = PROJECT_DIR / "evaluation" / "model_risk_report.json"
 
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
@@ -59,6 +62,21 @@ def evaluate_model() -> int:
     print(f"Evaluation dataset: {DATASET_PATH}")
     print(f"Hold-out samples: {len(y_test)}")
 
+    report = {
+        "report_version": "1.0",
+        "evaluation": {"split": "stratified hold-out", "test_size": 0.2, "random_state": 42,
+                       "samples": int(len(y_test)), "labels_available": True},
+        "fairness": {"status": "unavailable",
+                     "reason": "No protected-attribute columns were present in the evaluation dataset.",
+                     "protected_attributes": []},
+        "models": {},
+        "governance_note": "This report is evidence for human review, not a legal or regulatory compliance claim.",
+    }
+    candidates = [c for c in ("gender", "sex", "race", "ethnicity", "age_group") if c in raw_df.columns]
+    if candidates:
+        report["fairness"] = {"status": "available", "protected_attributes": candidates,
+                              "note": "Review group metrics with an accountable human before deployment."}
+
     for model_key, pipeline in pipelines.items():
         y_pred = pipeline.predict(X_test)
         y_proba = pipeline.predict_proba(X_test)[:, 1]
@@ -67,6 +85,35 @@ def evaluate_model() -> int:
         recall = recall_score(y_test, y_pred, zero_division=0)
         f1 = f1_score(y_test, y_pred, zero_division=0)
         roc_auc = roc_auc_score(y_test, y_proba)
+        brier = brier_score_loss(y_test, y_proba)
+        fraction, mean_predicted = calibration_curve(y_test, y_proba, n_bins=10, strategy="uniform")
+        model_report = {
+            "name": saved_data.get("metrics", {}).get(model_key, {}).get("name", model_key),
+            "accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1,
+            "roc_auc": roc_auc, "brier_score": brier,
+            "calibration": {"bins": len(fraction), "mean_predicted": mean_predicted.tolist(),
+                            "fraction_positive": fraction.tolist()},
+            "decision_threshold": 0.5,
+            "threshold_note": "0.5 is the classifier default; threshold selection requires documented human-approved costs.",
+        }
+        if candidates:
+            fairness_metrics = {}
+            protected_test = raw_df.loc[X_test.index, candidates]
+            for attribute in candidates:
+                groups = {}
+                for group, mask in protected_test[attribute].fillna("missing").items():
+                    group_mask = protected_test[attribute].fillna("missing") == group
+                    actual = y_test[group_mask]
+                    predicted = pd.Series(y_pred, index=y_test.index)[group_mask]
+                    groups[str(group)] = {
+                        "n": int(group_mask.sum()),
+                        "selection_rate": float(predicted.mean()) if len(predicted) else None,
+                        "true_positive_rate": float(((predicted == 1) & (actual == 1)).sum() / (actual == 1).sum())
+                        if (actual == 1).sum() else None,
+                    }
+                fairness_metrics[attribute] = groups
+            model_report["fairness"] = fairness_metrics
+        report["models"][model_key] = model_report
 
         print(f"\nModel: {saved_data.get('metrics', {}).get(model_key, {}).get('name', model_key)} ({model_key})")
         print(f"Accuracy : {accuracy * 100:.2f}%")
@@ -82,6 +129,8 @@ def evaluate_model() -> int:
     print("=" * 60)
     print(f"Selected model: {saved_data.get('best_key', 'unknown')}")
     print("=" * 60)
+    REPORT_PATH.write_text(__import__("json").dumps(report, indent=2), encoding="utf-8")
+    print(f"Risk governance report: {REPORT_PATH}")
     return 0
 
 

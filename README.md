@@ -35,7 +35,30 @@ Open `http://localhost:8000/`.
 
 Automatic training at application startup is disabled by default. For local development only, set `ALLOW_MODEL_TRAINING=true` if `models/model.joblib` is absent.
 
-For the complete Windows workflow, run `run_project.bat` from this project directory. It selects the existing `.venv` (or `venv`), verifies dependencies and required files, runs the authoritative training pipeline, evaluates every persisted model on the deterministic held-out split, prints the metrics in the terminal, and starts the Flask backend. The browser UI remains unchanged and is available at `http://localhost:8000/`.
+### Model risk and deployment controls
+
+Training writes a version, training configuration, UTC timestamp, SHA-256 digest
+(`models/model.joblib.sha256`) and metadata sidecar. Production startup verifies
+both sidecars and fails closed if the artifact is missing or altered. Every API
+response includes a non-sensitive `X-Request-ID`; structured audit records log
+only request ID, method, route, and status (never passwords or application
+financial/credit inputs). The evaluation CLI writes
+`evaluation/model_risk_report.json` with held-out metrics, Brier/calibration
+information, threshold metadata, and an explicit fairness status. Fairness
+metrics are calculated only when protected attributes and outcome labels are
+actually present; unavailable attributes are reported as unavailable, never
+fabricated.
+
+These safeguards are operational evidence, not a claim of legal or regulatory
+compliance. A responsible owner must approve the model, data retention and
+access policy, protected-attribute selection, threshold/cost trade-offs,
+validation independence, monitoring/drift limits, incident response, human
+override/appeal process, and any jurisdiction-specific obligations before
+production use.
+
+Before starting the server, copy `.env.example` to `.env` (or export the variables in the process environment). Set `AUTH_PASSWORD_HASH` to a Werkzeug password hash and set a long random `SESSION_SECRET`; production startup fails fast if either value is missing. The browser login uses an HttpOnly, SameSite session cookie and CSRF token. Static frontend files remain public, while `/api/models` and `/api/assess` require authentication. `SESSION_COOKIE_SECURE=true` is required when serving over HTTPS (and is the default in `ENVIRONMENT=production`).
+
+For the complete Windows workflow, run `run_project.bat` from this project directory. It selects the existing `.venv` (or `venv`), verifies dependencies and required files, trains only in `ENVIRONMENT=development`, runs tests, held-out evaluation, artifact/governance checks, and starts the Flask backend. Set `ENVIRONMENT=production` only with approved artifacts and all required secrets/configuration; startup then fails closed rather than training. The browser UI remains unchanged and is available at `http://localhost:8000/`.
 
 The evaluation command used by the batch workflow can also be run independently:
 
@@ -56,6 +79,7 @@ The tests cover model loading, all API endpoints, model selection, valid/invalid
 
 - `GET /` and `GET /riskLens.html`: serve the authoritative frontend.
 - `GET /api/health`: report service health and loaded models.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`: manage the server-side authenticated session.
 - `GET /api/models`: report persisted evaluation metrics and SMOTE metadata.
 - `POST /api/assess`: validate an application, select a model, predict default probability, and return score/category, risk factors, recommendations, and financial calculations.
 

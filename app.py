@@ -8,32 +8,111 @@ Open: http://localhost:8000/
 """
 
 import logging
+import json
 import os
+import secrets
 import time
+import uuid
 from collections import defaultdict, deque
 from pathlib import Path
+from functools import wraps
+from urllib.parse import urlparse
 import joblib
 import pandas as pd
 import numpy as np
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session
+from werkzeug.security import check_password_hash
+from governance import (
+    validate_production_config,
+    verify_artifact_integrity,
+)
 
 from models.Model_Logic import add_engineered_features, train_and_evaluate
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 MODEL_PATH = BASE_DIR / "models" / "model.joblib"
-ALLOWED_ORIGINS = {
-    origin.strip()
-    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
-}
-RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
-REQUEST_LOG = defaultdict(deque)
 
+
+def load_local_env():
+    """Load simple KEY=value pairs for local use without overriding real env vars."""
+    env_path = BASE_DIR / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_local_env()
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
+def parse_positive_int(name, default, maximum):
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        logger.warning("Invalid %s; using %s", name, default)
+        return default
+    return max(1, min(value, maximum))
+
+
+def parse_origins(raw):
+    origins = set()
+    for candidate in raw.split(","):
+        origin = candidate.strip().rstrip("/")
+        if not origin:
+            continue
+        parsed = urlparse(origin)
+        if parsed.scheme in {"http", "https"} and parsed.netloc and not parsed.path:
+            origins.add(origin)
+        else:
+            logger.warning("Ignoring invalid CORS origin: %s", candidate)
+    return origins
+
+
+ALLOWED_ORIGINS = parse_origins(os.environ.get("ALLOWED_ORIGINS", ""))
+RATE_LIMIT_PER_MINUTE = parse_positive_int("RATE_LIMIT_PER_MINUTE", 60, 10000)
+MAX_REQUEST_BYTES = parse_positive_int("MAX_REQUEST_BYTES", 32 * 1024, 10 * 1024 * 1024)
+REQUEST_LOG = defaultdict(deque)
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
+CONFIG_ERRORS = validate_production_config()
+if CONFIG_ERRORS:
+    raise RuntimeError("Production configuration invalid: " + "; ".join(CONFIG_ERRORS))
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
+app.config.update(
+    SECRET_KEY=os.environ.get("SESSION_SECRET") or secrets.token_urlsafe(32),
+    MAX_CONTENT_LENGTH=MAX_REQUEST_BYTES,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE=os.environ.get("SESSION_COOKIE_SAMESITE", "Lax"),
+    SESSION_COOKIE_SECURE=os.environ.get(
+        "SESSION_COOKIE_SECURE", "true" if ENVIRONMENT == "production" else "false"
+    ).lower() in {"1", "true", "yes"},
+)
+AUTH_USERNAME = os.environ.get("AUTH_USERNAME", "admin@risklens.local").strip().lower()
+AUTH_PASSWORD_HASH = os.environ.get("AUTH_PASSWORD_HASH", "").strip()
+
+
+def requires_auth(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return view(*args, **kwargs)
+        if not session.get("authenticated"):
+            return api_error("Authentication required", 401)
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            csrf_token = request.headers.get("X-CSRF-Token", "")
+            if not secrets.compare_digest(
+                csrf_token, str(session.get("csrf_token", ""))
+            ):
+                return api_error("CSRF validation failed", 403)
+        return view(*args, **kwargs)
+    return wrapped
 
 
 def load_or_train_models():
@@ -45,6 +124,7 @@ def load_or_train_models():
         logger.warning("Model file not found; running the local training pipeline.")
         train_and_evaluate()
     
+    verify_artifact_integrity(MODEL_PATH, require_sidecar=ENVIRONMENT == "production")
     print(f"Loading ML models from {MODEL_PATH}...")
     saved_data = joblib.load(MODEL_PATH)
     return saved_data
@@ -54,6 +134,12 @@ pipelines = saved_data.get("pipelines", {"xgboost": saved_data.get("pipeline")})
 metrics = saved_data.get("metrics", {})
 smote_info = saved_data.get("smote_info", {})
 best_key = saved_data.get("best_key", "xgboost")
+MODEL_VERSION = saved_data.get("model_version", "unknown")
+ARTIFACT_SHA256 = verify_artifact_integrity(
+    MODEL_PATH, require_sidecar=ENVIRONMENT == "production"
+)["sha256"]
+if ENVIRONMENT == "production" and not (BASE_DIR / "evaluation" / "model_risk_report.json").is_file():
+    raise RuntimeError("Production model-risk evaluation report is missing")
 
 
 def normalize_loan_purpose(raw_purpose: str) -> str:
@@ -140,16 +226,36 @@ def add_cors_headers(response):
     if origin and origin in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    if request.path.startswith("/api/") and origin and origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-Token"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if request.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+    response.headers["X-Request-ID"] = getattr(request, "request_id", "")
+    if request.path.startswith("/api/"):
+        logger.info(json.dumps({
+            "event": "api_request",
+            "request_id": getattr(request, "request_id", ""),
+            "method": request.method,
+            "path": request.path,
+            "status": response.status_code,
+        }, separators=(",", ":")))
     return response
 
 
 @app.before_request
 def enforce_api_rate_limit():
+    request.request_id = request.headers.get("X-Request-ID", "").strip()[:128] or uuid.uuid4().hex
+    if request.content_length and request.content_length > MAX_REQUEST_BYTES:
+        return api_error("Request body is too large", 413)
     if not request.path.startswith("/api/") or request.method == "OPTIONS":
         return None
-    client = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    client = request.remote_addr or "unknown"
     now = time.monotonic()
     requests = REQUEST_LOG[client]
     while requests and now - requests[0] >= 60:
@@ -169,23 +275,73 @@ def health_check():
         "modelsLoaded": list(pipelines.keys()),
         "smoteResampling": smote_info.get("method", "Active"),
         "bestModel": best_key
+        ,"modelVersion": MODEL_VERSION, "artifactSha256": ARTIFACT_SHA256
+    })
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return api_error("JSON object payload required", 400)
+    username = str(payload.get("email") or payload.get("username") or "").strip().lower()
+    password = payload.get("password")
+    if not AUTH_PASSWORD_HASH:
+        logger.error("AUTH_PASSWORD_HASH is not configured")
+        return api_error("Authentication is not configured", 503)
+    if not isinstance(password, str) or not username or username != AUTH_USERNAME:
+        return api_error("Invalid credentials", 401)
+    try:
+        valid = check_password_hash(AUTH_PASSWORD_HASH, password)
+    except (ValueError, TypeError):
+        logger.error("AUTH_PASSWORD_HASH is invalid")
+        return api_error("Authentication is not configured", 503)
+    if not valid:
+        return api_error("Invalid credentials", 401)
+    session.clear()
+    session["authenticated"] = True
+    session["username"] = username
+    session["csrf_token"] = secrets.token_urlsafe(32)
+    return jsonify({
+        "authenticated": True,
+        "username": username,
+        "csrfToken": session["csrf_token"],
+    })
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+@requires_auth
+def logout():
+    session.clear()
+    return jsonify({"authenticated": False})
+
+
+@app.route("/api/auth/session", methods=["GET"])
+def auth_session():
+    return jsonify({
+        "authenticated": bool(session.get("authenticated")),
+        "username": session.get("username"),
+        "csrfToken": session.get("csrf_token"),
     })
 
 
 # ============ METRICS API ENDPOINT ============
 
 @app.route("/api/models", methods=["GET"])
+@requires_auth
 def get_model_metrics():
     return jsonify({
         "smoteInfo": smote_info,
         "metrics": metrics,
         "bestModelKey": best_key
+        ,"modelVersion": MODEL_VERSION, "artifactSha256": ARTIFACT_SHA256
     })
 
 
 # ============ ML ASSESSMENT ENDPOINT ============
 
 @app.route("/api/assess", methods=["POST", "OPTIONS"])
+@requires_auth
 def assess_risk():
     if request.method == "OPTIONS":
         return ("", 204)
@@ -372,7 +528,10 @@ def assess_risk():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "0.0.0.0")
-    debug = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
+    debug = (
+        ENVIRONMENT != "production"
+        and os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
+    )
 
     print(f"\n==========================================================")
     print(f" RiskLens ML Backend Server Running!")
@@ -383,4 +542,3 @@ if __name__ == "__main__":
     print(f" Assessment API: http://localhost:{port}/api/assess")
     print(f"==========================================================\n")
     app.run(host=host, port=port, debug=debug)
-
