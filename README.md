@@ -84,7 +84,7 @@ The tests cover model loading, all API endpoints, model selection, valid/invalid
 
 The repayment-history dropdown includes **No-Loans Before** (`repayStatus: "no_loans_before"`). For this selection, the API returns `score: 0`, `category: "No Prior Loan History"`, and `probabilitySource: "no_history_override"`. This explicit demo rule bypasses model prediction; zero is not evidence of zero default risk and must not be used as a lending decision.
 
-Dataset columns are documented in [references/DATASET_FIELDS.md](references/DATASET_FIELDS.md). The local API-integration notes are kept in `references/MODEL_INTEGRATION.md`, which is intentionally excluded from Git.
+Dataset columns are documented in [references/DATASET_FIELDS.md](references/DATASET_FIELDS.md). The API-integration note at `references/MODEL_INTEGRATION.md` is local-only and intentionally ignored by Git.
 
 ## Project structure
 
