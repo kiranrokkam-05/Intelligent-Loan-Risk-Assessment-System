@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Keep local API-integration notes out of version control.
+/references/MODEL_INTEGRATION.md

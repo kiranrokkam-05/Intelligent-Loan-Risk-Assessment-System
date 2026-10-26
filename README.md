@@ -82,7 +82,9 @@ The tests cover model loading, all API endpoints, model selection, valid/invalid
 - `GET /api/models`: report persisted evaluation metrics and SMOTE metadata.
 - `POST /api/assess`: validate an application, select a model, predict default probability, and return score/category, risk factors, recommendations, and financial calculations.
 
-The request field mapping and response contract are documented in [references/MODEL_INTEGRATION.md](references/MODEL_INTEGRATION.md). Dataset columns are documented in [references/DATASET_FIELDS.md](references/DATASET_FIELDS.md).
+The repayment-history dropdown includes **No-Loans Before** (`repayStatus: "no_loans_before"`). For this selection, the API returns `score: 0`, `category: "No Prior Loan History"`, and `probabilitySource: "no_history_override"`. This explicit demo rule bypasses model prediction; zero is not evidence of zero default risk and must not be used as a lending decision.
+
+Dataset columns are documented in [references/DATASET_FIELDS.md](references/DATASET_FIELDS.md). The local API-integration notes are kept in `references/MODEL_INTEGRATION.md`, which is intentionally excluded from Git.
 
 ## Project structure
 
