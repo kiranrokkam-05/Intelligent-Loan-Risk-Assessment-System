@@ -281,6 +281,7 @@
   .risk-low{background:var(--green-bg);color:var(--green);}
   .risk-medium{background:var(--amber-bg);color:var(--amber);}
   .risk-high{background:var(--red-bg);color:var(--red);}
+  .risk-unknown{background:var(--surface-alt);color:var(--ink-soft);}
 
   /* Verdict card */
   .verdict-card{
@@ -323,6 +324,7 @@
   .fgood{background:var(--green-bg);color:var(--green);}
   .fwarn{background:var(--amber-bg);color:var(--amber);}
   .fbad{background:var(--red-bg);color:var(--red);}
+  .fneutral{background:var(--surface-alt);color:var(--ink-soft);}
 
   /* Financial details grid */
   .fin-grid{
@@ -749,6 +751,7 @@
                   <option value="good" selected>Good &mdash; occasional delay</option>
                   <option value="fair">Fair &mdash; frequent delays</option>
                   <option value="poor">Poor &mdash; missed payments</option>
+                  <option value="no_loans_before">No-Loans Before &mdash; no previous loan history</option>
                 </select>
               </div>
             </div>
@@ -899,7 +902,7 @@
     loan: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/>'
   };
   function addFactor(label, valueText, tier, iconKey) {
-    const cls = tier === 'good' ? 'fgood' : tier === 'warn' ? 'fwarn' : 'fbad';
+    const cls = tier === 'good' ? 'fgood' : tier === 'warn' ? 'fwarn' : tier === 'neutral' ? 'fneutral' : 'fbad';
 
     const row = document.createElement('div');
     row.className = 'factor';
@@ -1025,7 +1028,9 @@
       const category = result.category;
 
       const badgeClass =
-        category === 'Low Risk'
+        category === 'No Prior Loan History'
+          ? 'risk-unknown'
+          : category === 'Low Risk'
           ? 'risk-low'
           : category === 'Medium Risk'
             ? 'risk-medium'

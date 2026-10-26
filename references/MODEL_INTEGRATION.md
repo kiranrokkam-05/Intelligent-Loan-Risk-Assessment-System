@@ -12,6 +12,8 @@ The integrated Flask service exposes `POST /api/assess`; the browser uses it fro
 
 The optional `model` or `modelChoice` selects `xgboost`, `rf`, or `lr`. Successful responses include `apiVersion`, a 0–100 `score`, `category`, `probability`, `factors` (`label`, `valueText`, `tier`, `iconKey`), `loanDetails`, and `recommendation`.
 
+`repayStatus` also accepts `no_loans_before`. This UI demo rule returns a risk index of `0` with category `No Prior Loan History`; `probabilitySource` is `no_history_override`. It bypasses the model and does **not** mean the applicant has zero default risk. This value is an API/UI state, not a training-data category.
+
 Invalid input receives `422` with `{ "error": "..." }`; malformed or missing JSON receives `400`; excessive requests receive `429`.
 
 ## External UI integration

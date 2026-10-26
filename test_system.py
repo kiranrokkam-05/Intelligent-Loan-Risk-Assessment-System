@@ -127,6 +127,32 @@ class TestRiskLensBackend(unittest.TestCase):
         self.assertGreater(data["score"], 60)
         print(f"OK: High Risk Real-Time Assessment Verified (Score: {data['score']}, Category: {data['category']})")
 
+    def test_no_loans_before_sets_zero_demo_index(self):
+        payload = {
+            "age": 30,
+            "empType": "salaried",
+            "empExp": 5,
+            "income": 600000,
+            "addIncome": 0,
+            "loanAmt": 250000,
+            "loanTerm": 24,
+            "loanPurpose": "personal",
+            "debt": 0,
+            "emi": 0,
+            "credit": 650,
+            "defaults": 0,
+            "repayStatus": "no_loans_before",
+        }
+        response = self.client.post("/api/assess", json=payload)
+        self.assertEqual(response.status_code, 200)
+        result = response.get_json()
+        self.assertEqual(result["score"], 0)
+        self.assertEqual(result["probability"], 0.0)
+        self.assertEqual(result["probabilitySource"], "no_history_override")
+        self.assertEqual(result["category"], "No Prior Loan History")
+        self.assertEqual(result["modelUsed"], "No-history demo rule")
+        self.assertIn("not a model estimate", result["recommendation"])
+
     def test_loan_details_calculations(self):
         """Verify Loan Details ratio calculations (DTI, LTI, EMI preview)."""
         payload = {

@@ -155,8 +155,8 @@ def parse_assessment_payload(payload):
     if emp_type not in {"salaried", "self", "other"}:
         raise ValueError("empType must be salaried, self, or other")
     repayment_status = str(payload.get("repayStatus", "")).lower()
-    if repayment_status not in {"excellent", "good", "fair", "poor"}:
-        raise ValueError("repayStatus must be excellent, good, fair, or poor")
+    if repayment_status not in {"excellent", "good", "fair", "poor", "no_loans_before"}:
+        raise ValueError("repayStatus must be excellent, good, fair, poor, or no_loans_before")
     model_choice = str(payload.get("modelChoice") or payload.get("model") or best_key).lower()
     if model_choice not in pipelines:
         raise ValueError(f"model must be one of: {', '.join(sorted(pipelines))}")
@@ -314,12 +314,21 @@ def assess_risk():
         engineered_df = add_engineered_features(input_data)
 
         # ML Prediction using chosen model
-        default_prob = float(selected_pipeline.predict_proba(engineered_df)[0][1])
-        score = int(np.round(default_prob * 100))
-        score = max(0, min(100, score))
+        no_prior_loan_history = repayment_status == "no_loans_before"
+        if no_prior_loan_history:
+            # Requested demo behavior; this is an explicit override, not a
+            # model prediction or evidence of zero default risk.
+            default_prob = 0.0
+            score = 0
+        else:
+            default_prob = float(selected_pipeline.predict_proba(engineered_df)[0][1])
+            score = int(np.round(default_prob * 100))
+            score = max(0, min(100, score))
 
         # Risk Category
-        if score <= 34:
+        if no_prior_loan_history:
+            category = "No Prior Loan History"
+        elif score <= 34:
             category = "Low Risk"
         elif score <= 64:
             category = "Medium Risk"
@@ -362,7 +371,8 @@ def assess_risk():
             "excellent": ("good", "Excellent"),
             "good": ("good", "Good"),
             "fair": ("warn", "Fair"),
-            "poor": ("bad", "Poor")
+            "poor": ("bad", "Poor"),
+            "no_loans_before": ("neutral", "No-Loans Before")
         }
         repay_tier, repay_text = repay_map.get(repayment_status, ("warn", repayment_status.capitalize()))
 
@@ -426,20 +436,27 @@ def assess_risk():
             "Medium Risk": f"{model_display_name} predicts moderate default risk ({default_prob*100:.1f}% default probability). Profile shows mixed risk indicators. Recommend additional income proof or a shorter loan tenure.",
             "High Risk": f"{model_display_name} predicts an elevated risk of default ({default_prob*100:.1f}% default probability). High debt or poor credit history detected. Recommend manual underwriter review or collateral requirements."
         }
+        recommendation = (
+            "No prior loan history was reported. The risk index is set to 0 by the requested "
+            "demo rule; this is not a model estimate or evidence of zero default risk."
+            if no_prior_loan_history else recommendations[category]
+        )
+        model_used = "No-history demo rule" if no_prior_loan_history else model_display_name
 
-        logger.info("Assessment completed: model=%s category=%s", model_choice, category)
+        logger.info("Assessment completed: model=%s category=%s", model_used, category)
         return jsonify({
             "apiVersion": "1.0",
             "score": score,
             "category": category,
             "probability": round(default_prob, 4),
+            "probabilitySource": "no_history_override" if no_prior_loan_history else "calibrated_model",
             "modelChoice": model_choice,
-            "modelUsed": model_display_name,
+            "modelUsed": model_used,
             "allMetrics": metrics,
             "smoteInfo": smote_info,
             "loanDetails": loan_details_summary,
             "factors": factors,
-            "recommendation": recommendations[category]
+            "recommendation": recommendation
         })
 
     except ValueError as exc:
